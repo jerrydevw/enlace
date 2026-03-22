@@ -19,7 +19,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")         // protege toda a API
                 .excludePathPatterns(
                         "/actuator/health",         // ALB health check — sem autenticação
-                        "/actuator/info"
+                        "/actuator/info",
+                        "/api/v1/internal/**"       // protegido pela X-Internal-Key própria
                 );
     }
 }

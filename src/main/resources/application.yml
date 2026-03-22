@@ -41,6 +41,9 @@ app:
 api:
   key: ${ENLACE_API_KEY:enlace-dev-key-troque-em-prod}
 
+enlace:
+  internal-api-key: ${ENLACE_INTERNAL_API_KEY:enlace-internal-dev}
+
 logging:
   level:
     com.enlace: INFO
