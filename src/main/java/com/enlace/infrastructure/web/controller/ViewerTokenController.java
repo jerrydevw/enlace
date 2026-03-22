@@ -41,7 +41,8 @@ public class ViewerTokenController {
                         token.getLabel(),
                         token.getToken(),
                         String.format("%s/watch/%s?t=%s", baseUrl, event.getSlug(), token.getToken()),
-                        token.getExpiresAt()
+                        token.getExpiresAt(),
+                        token.getDeletedAt()
                 ))
                 .collect(Collectors.toList());
         

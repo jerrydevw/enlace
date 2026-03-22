@@ -1,6 +1,7 @@
 package com.enlace.infrastructure.web.controller;
 
 import com.enlace.domain.model.Event;
+import com.enlace.domain.model.EventStatus;
 import com.enlace.domain.model.StreamCredential;
 import com.enlace.domain.port.in.CreateEventUseCase;
 import com.enlace.domain.port.in.DeleteEventUseCase;
@@ -9,6 +10,7 @@ import com.enlace.domain.port.in.GetEventUseCase;
 import com.enlace.infrastructure.web.dto.CreateEventRequest;
 import com.enlace.infrastructure.web.dto.CredentialsResponse;
 import com.enlace.infrastructure.web.dto.EventResponse;
+import com.enlace.infrastructure.web.dto.IngestionUrlResponse;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -69,18 +71,43 @@ public class EventController {
         return ResponseEntity.ok(new CredentialsResponse(
                 credential.getRtmpEndpoint(),
                 credential.getStreamKey(),
-                credential.getExpiresAt()
+                credential.getExpiresAt(),
+                credential.getDeletedAt()
         ));
     }
 
+    @GetMapping("/{id}/ingestion-url")
+    public ResponseEntity<IngestionUrlResponse> getIngestionUrl(@PathVariable UUID id) {
+        log.info("Buscando URL de ingestão para o evento: {}", id);
+        Event event = getEventUseCase.getById(id);
+        
+        if (event.getStatus() != EventStatus.READY && event.getStatus() != EventStatus.LIVE && event.getStatus() != EventStatus.ENDED) {
+            log.warn("Tentativa de buscar URL de ingestão para evento não provisionado: ID={}, Status={}", id, event.getStatus());
+            throw new IllegalStateException("O canal ainda não foi provisionado para este evento.");
+        }
+        
+        StreamCredential credential = getCredentialsUseCase.getCredentials(id);
+        
+        // Amazon IVS RTMPS URL format: rtmps://<endpoint>:443/app/<stream_key>
+        // Note: rtmpEndpoint typically looks like "6dc3f567fe06.global-contribute.live-video.net"
+        String ingestionUrl = String.format("rtmps://%s:443/app/%s", 
+                credential.getRtmpEndpoint(), 
+                credential.getStreamKey());
+        
+        return ResponseEntity.ok(new IngestionUrlResponse(ingestionUrl));
+    }
+
     private EventResponse toResponse(Event event) {
+        boolean liveStarted = event.getStatus() == EventStatus.LIVE || event.getStatus() == EventStatus.ENDED;
         return new EventResponse(
                 event.getId(),
                 event.getSlug(),
                 event.getTitle(),
                 event.getScheduledAt(),
                 event.getStatus(),
-                event.getCreatedAt()
+                liveStarted ? event.getIvsPlaybackUrl() : null,
+                event.getCreatedAt(),
+                event.getDeletedAt()
         );
     }
 }

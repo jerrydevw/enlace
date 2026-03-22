@@ -8,5 +8,6 @@ public record ViewerTokenResponse(
     String label,
     String token,
     String viewerUrl,
-    Instant expiresAt
+    Instant expiresAt,
+    Instant deletedAt
 ) {}

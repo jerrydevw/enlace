@@ -5,5 +5,6 @@ import java.time.Instant;
 public record CredentialsResponse(
     String rtmpEndpoint,
     String streamKey,
-    Instant expiresAt
+    Instant expiresAt,
+    Instant deletedAt
 ) {}

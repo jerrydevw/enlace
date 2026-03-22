@@ -10,5 +10,7 @@ public record EventResponse(
     String title,
     Instant scheduledAt,
     EventStatus status,
-    Instant createdAt
+    String ivsPlaybackUrl,
+    Instant createdAt,
+    Instant deletedAt
 ) {}
