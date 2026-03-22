@@ -19,6 +19,9 @@ public class IvsGatewayAdapter implements IvsGateway {
     @Value("${aws.ivs.recording-bucket}")
     private String recordingBucket;
 
+    @Value("${aws.ivs.recording-configuration-arn:}")
+    private String recordingConfigurationArn;
+
     public IvsGatewayAdapter(IvsClient ivsClient) {
         this.ivsClient = ivsClient;
     }
@@ -66,31 +69,14 @@ public class IvsGatewayAdapter implements IvsGateway {
 
     @Override
     public void configureRecording(String channelArn, String s3Prefix) {
-        log.info("Configurando gravação AWS IVS para o canal: {}", channelArn);
-        // In a real scenario, we might create a RecordingConfiguration first
-        // and then associate it with the channel.
-        // For simplicity in Sprint 1, we assume a recording configuration might be pre-created
-        // or we create a basic one here.
-
-        CreateRecordingConfigurationRequest recordingRequest = CreateRecordingConfigurationRequest.builder()
-                .name("recording-config-" + channelArn.substring(channelArn.lastIndexOf("/") + 1))
-                .destinationConfiguration(DestinationConfiguration.builder()
-                        .s3(S3DestinationConfiguration.builder()
-                                .bucketName(recordingBucket)
-                                .build())
-                        .build())
-                .recordingReconnectWindowSeconds(60)
-                .build();
-
-        CreateRecordingConfigurationResponse recordingResponse = ivsClient.createRecordingConfiguration(recordingRequest);
-        log.info("Configuração de gravação criada: {}", recordingResponse.recordingConfiguration().arn());
+        log.info("Associando recording configuration — arn: '{}', channelArn: '{}'",
+                recordingConfigurationArn, channelArn);
 
         UpdateChannelRequest updateRequest = UpdateChannelRequest.builder()
                 .arn(channelArn)
-                .recordingConfigurationArn(recordingResponse.recordingConfiguration().arn())
+                .recordingConfigurationArn(recordingConfigurationArn)
                 .build();
 
         ivsClient.updateChannel(updateRequest);
-        log.info("Canal IVS atualizado com configuração de gravação.");
     }
 }

@@ -30,6 +30,8 @@ aws:
   ivs:
     recording-bucket: ${IVS_RECORDING_BUCKET:}
     recording-role-arn: ${IVS_RECORDING_ROLE_ARN:}
+    recording-configuration-arn: ${IVS_RECORDING_CONFIGURATION_ARN:}
+
   sqs:
     provisioning-queue-url: ${SQS_PROVISIONING_QUEUE_URL:}
 
