@@ -1,11 +1,13 @@
 package com.enlace.infrastructure.aws;
 
 import com.enlace.domain.port.out.IvsGateway;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.ivs.IvsClient;
 import software.amazon.awssdk.services.ivs.model.*;
 
+@Slf4j
 @Component
 public class IvsGatewayAdapter implements IvsGateway {
 
@@ -23,6 +25,7 @@ public class IvsGatewayAdapter implements IvsGateway {
 
     @Override
     public IvsChannelResult createChannel(String eventSlug) {
+        log.info("Chamando AWS IVS para criar canal: {}", eventSlug);
         CreateChannelRequest request = CreateChannelRequest.builder()
                 .name(eventSlug)
                 .type(ChannelType.STANDARD)
@@ -30,6 +33,7 @@ public class IvsGatewayAdapter implements IvsGateway {
                 .build();
 
         CreateChannelResponse response = ivsClient.createChannel(request);
+        log.info("Canal IVS criado com sucesso na AWS: {}", response.channel().arn());
 
         return new IvsChannelResult(
                 response.channel().arn(),
@@ -42,12 +46,14 @@ public class IvsGatewayAdapter implements IvsGateway {
 
     @Override
     public void deleteChannel(String channelArn, String streamKeyArn) {
+        log.info("Chamando AWS IVS para deletar canal: {}", channelArn);
         if (streamKeyArn != null) {
             try {
                 ivsClient.deleteStreamKey(DeleteStreamKeyRequest.builder()
                         .arn(streamKeyArn)
                         .build());
             } catch (Exception e) {
+                log.warn("Erro ao deletar stream key {}: {}", streamKeyArn, e.getMessage());
                 // Log and continue
             }
         }
@@ -55,10 +61,12 @@ public class IvsGatewayAdapter implements IvsGateway {
         ivsClient.deleteChannel(DeleteChannelRequest.builder()
                 .arn(channelArn)
                 .build());
+        log.info("Canal IVS deletado com sucesso na AWS: {}", channelArn);
     }
 
     @Override
     public void configureRecording(String channelArn, String s3Prefix) {
+        log.info("Configurando gravação AWS IVS para o canal: {}", channelArn);
         // In a real scenario, we might create a RecordingConfiguration first
         // and then associate it with the channel.
         // For simplicity in Sprint 1, we assume a recording configuration might be pre-created
@@ -75,6 +83,7 @@ public class IvsGatewayAdapter implements IvsGateway {
                 .build();
 
         CreateRecordingConfigurationResponse recordingResponse = ivsClient.createRecordingConfiguration(recordingRequest);
+        log.info("Configuração de gravação criada: {}", recordingResponse.recordingConfiguration().arn());
 
         UpdateChannelRequest updateRequest = UpdateChannelRequest.builder()
                 .arn(channelArn)
@@ -82,5 +91,6 @@ public class IvsGatewayAdapter implements IvsGateway {
                 .build();
 
         ivsClient.updateChannel(updateRequest);
+        log.info("Canal IVS atualizado com configuração de gravação.");
     }
 }

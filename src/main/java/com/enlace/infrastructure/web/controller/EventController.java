@@ -10,12 +10,14 @@ import com.enlace.infrastructure.web.dto.CreateEventRequest;
 import com.enlace.infrastructure.web.dto.CredentialsResponse;
 import com.enlace.infrastructure.web.dto.EventResponse;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/events")
 public class EventController {
@@ -35,28 +37,34 @@ public class EventController {
 
     @PostMapping
     public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequest request) {
+        log.info("Recebendo requisição para criar evento: {}", request.title());
         Event event = createEventUseCase.create(new CreateEventUseCase.CreateEventCommand(
                 request.customerId(),
                 request.title(),
                 request.scheduledAt()
         ));
+        log.info("Evento criado com sucesso: ID={}, Slug={}", event.getId(), event.getSlug());
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(toResponse(event));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<EventResponse> get(@PathVariable UUID id) {
+        log.info("Buscando evento por ID: {}", id);
         Event event = getEventUseCase.getById(id);
         return ResponseEntity.ok(toResponse(event));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        log.info("Recebendo requisição para deletar evento: {}", id);
         deleteEventUseCase.delete(id);
+        log.info("Evento deletado com sucesso: {}", id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/credentials")
     public ResponseEntity<CredentialsResponse> getCredentials(@PathVariable UUID id) {
+        log.info("Buscando credenciais para o evento: {}", id);
         StreamCredential credential = getCredentialsUseCase.getCredentials(id);
         return ResponseEntity.ok(new CredentialsResponse(
                 credential.getRtmpEndpoint(),
