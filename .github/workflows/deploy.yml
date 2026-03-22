@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Enlace - OIDC Role para GitHub Actions.
+  Permite que o GitHub Actions assuma uma role AWS via token OIDC,
+  sem necessidade de chaves de acesso estaticas.
+  Stack: enlace-github-oidc
+
+Parameters:
+
+  Environment:
+    Type: String
+    AllowedValues: [dev, staging, prod]
+    Default: dev
+    Description: Ambiente de deploy
+
+  GitHubOrg:
+    Type: String
+    Description: Nome da organizacao ou usuario no GitHub
+
+  GitHubRepo:
+    Type: String
+    Description: Nome do repositorio no GitHub
+    Default: enlace
+
+  EcrRepositoryName:
+    Type: String
+    Default: enlace/app
+    Description: Nome do repositorio ECR
+
+Resources:
+
+  # ── OIDC Provider ─────────────────────────────────────────────────────────
+  # Registra o GitHub Actions como IdP confiavel na conta AWS.
+  # Precisa existir apenas uma vez por conta — se ja existir, reutilize o ARN.
+
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - ffffffffffffffffffffffffffffffffffffffff
+      Tags:
+        - Key: Project
+          Value: enlace
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ── GitHub Actions Role ───────────────────────────────────────────────────
+  # Assumida pelo workflow do GitHub Actions via OIDC.
+  # O condition restringe ao repositorio e branch especificos.
+
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub enlace-github-actions-role-${Environment}
+      Description: Role assumida pelo GitHub Actions via OIDC para deploy do Enlace
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !GetAtt GitHubOidcProvider.Arn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub repo:${GitHubOrg}/${GitHubRepo}:*
+      Tags:
+        - Key: Project
+          Value: enlace
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ECR — permissoes para autenticar, fazer pull e push da imagem
+  GitHubActionsEcrPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub enlace-github-actions-ecr-policy-${Environment}
+      Roles:
+        - !Ref GitHubActionsRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EcrAuth
+            Effect: Allow
+            Action:
+              - ecr:GetAuthorizationToken
+            Resource: "*"
+          - Sid: EcrImagePush
+            Effect: Allow
+            Action:
+              - ecr:BatchCheckLayerAvailability
+              - ecr:GetDownloadUrlForLayer
+              - ecr:BatchGetImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+              - ecr:PutImage
+            Resource: !Sub arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrRepositoryName}
+
+  # ECS — permissoes para atualizar o service e aguardar estabilizacao
+  GitHubActionsEcsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Sub enlace-github-actions-ecs-policy-${Environment}
+      Roles:
+        - !Ref GitHubActionsRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EcsUpdateService
+            Effect: Allow
+            Action:
+              - ecs:UpdateService
+              - ecs:DescribeServices
+              - ecs:DescribeTaskDefinition
+              - ecs:RegisterTaskDefinition
+              - ecs:ListTaskDefinitions
+            Resource: "*"
+          - Sid: PassRoleToEcs
+            Effect: Allow
+            Action:
+              - iam:PassRole
+            Resource:
+              - !Sub arn:aws:iam::${AWS::AccountId}:role/enlace-app-role-${Environment}
+              - !Sub arn:aws:iam::${AWS::AccountId}:role/enlace-ecs-execution-role-${Environment}
+            Condition:
+              StringEquals:
+                iam:PassedToService: ecs-tasks.amazonaws.com
+
+Outputs:
+
+  GitHubActionsRoleArn:
+    Description: ARN da role — copiar para o secret AWS_ROLE_ARN no GitHub
+    Value: !GetAtt GitHubActionsRole.Arn
+    Export:
+      Name: !Sub enlace-github-actions-role-arn-${Environment}
+
+  OidcProviderArn:
+    Description: ARN do OIDC Provider do GitHub
+    Value: !GetAtt GitHubOidcProvider.Arn
+    Export:
+      Name: !Sub enlace-github-oidc-provider-arn-${Environment}
