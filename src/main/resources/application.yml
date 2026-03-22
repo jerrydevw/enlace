@@ -1,0 +1,44 @@
+spring:
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/enlace}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+  cloud:
+    aws:
+      credentials:
+        access-key: ${AWS_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_ACCESS_KEY:}
+      region:
+        static: ${AWS_REGION:}
+
+aws:
+  region: ${AWS_REGION:}
+  access-key: ${AWS_ACCESS_KEY_ID:}
+  secret-key: ${AWS_SECRET_ACCESS_KEY:}
+  ivs:
+    recording-bucket: ${IVS_RECORDING_BUCKET:}
+    recording-role-arn: ${IVS_RECORDING_ROLE_ARN:}
+  sqs:
+    provisioning-queue-url: ${SQS_PROVISIONING_QUEUE_URL:}
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  viewer-token-ttl-hours: ${VIEWER_TOKEN_TTL_HOURS:72}
+api:
+  key: ${ENLACE_API_KEY:enlace-dev-key-troque-em-prod}
+
+logging:
+  level:
+    com.enlace: INFO
