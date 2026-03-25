@@ -31,27 +31,45 @@ public class ViewerTokenController {
     }
 
     @PostMapping
-    public ResponseEntity<List<ViewerTokenResponse>> createTokens(@PathVariable UUID id, @RequestBody CreateViewerTokenRequest request) {
-        Event event = getEventUseCase.getById(id);
-        List<ViewerToken> tokens = manageViewerTokensUseCase.generateTokens(id, request.labels());
+    public ResponseEntity<List<ViewerTokenResponse>> createTokens(@PathVariable UUID id, @RequestBody List<CreateViewerTokenRequest> requests) {
+        getEventUseCase.getById(id);
+        List<ViewerToken> tokens = manageViewerTokensUseCase.generateTokens(id, requests);
         
         List<ViewerTokenResponse> response = tokens.stream()
-                .map(token -> new ViewerTokenResponse(
-                        token.getId(),
-                        token.getLabel(),
-                        token.getToken(),
-                        String.format("%s/watch/%s?t=%s", baseUrl, event.getSlug(), token.getToken()),
-                        token.getExpiresAt(),
-                        token.getDeletedAt()
-                ))
+                .map(this::toResponse)
                 .collect(Collectors.toList());
         
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ViewerTokenResponse>> getTokens(@PathVariable UUID id) {
+        getEventUseCase.getById(id);
+        List<ViewerToken> tokens = manageViewerTokensUseCase.getTokensByEventId(id);
+        
+        List<ViewerTokenResponse> response = tokens.stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{tokenId}")
     public ResponseEntity<Void> revokeToken(@PathVariable UUID id, @PathVariable UUID tokenId) {
         manageViewerTokensUseCase.revokeToken(id, tokenId);
         return ResponseEntity.noContent().build();
+    }
+
+    private ViewerTokenResponse toResponse(ViewerToken token) {
+        return new ViewerTokenResponse(
+                token.getId(),
+                token.getLabel(),
+                token.getCode(),
+                token.getGuestName(),
+                token.getDeliveryStatus(),
+                token.isRevoked(),
+                token.getExpiresAt(),
+                token.getDeletedAt()
+        );
     }
 }

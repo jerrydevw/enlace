@@ -55,4 +55,14 @@ public class JpaViewerTokenRepository implements ViewerTokenRepository {
     public void deleteByEventId(UUID eventId) {
         springDataViewerTokenRepository.deleteByEventId(eventId);
     }
+
+    @Override
+    public Optional<ViewerToken> findByEventSlugAndCode(String slug, String code) {
+        return springDataViewerTokenRepository.findByEventSlugAndCode(slug, code).map(ViewerTokenEntity::toDomain);
+    }
+
+    @Override
+    public boolean existsByCode(String code) {
+        return springDataViewerTokenRepository.existsByCode(code);
+    }
 }

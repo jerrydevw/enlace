@@ -6,6 +6,8 @@ import com.enlace.domain.model.ViewerToken;
 import com.enlace.domain.port.in.ManageViewerTokensUseCase;
 import com.enlace.domain.port.out.EventRepository;
 import com.enlace.domain.port.out.ViewerTokenRepository;
+import com.enlace.infrastructure.web.dto.CreateViewerTokenRequest;
+import com.enlace.shared.InviteCodeGenerator;
 import com.enlace.shared.TokenGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,23 +35,49 @@ public class ManageViewerTokensService implements ManageViewerTokensUseCase {
 
     @Override
     @Transactional
-    public List<ViewerToken> generateTokens(UUID eventId, List<String> labels) {
+    public List<ViewerToken> generateTokens(UUID eventId, List<CreateViewerTokenRequest> requests) {
         eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException("Event not found: " + eventId));
 
         Instant expiresAt = Instant.now().plus(tokenTtlHours, ChronoUnit.HOURS);
+        InviteCodeGenerator codeGenerator = new InviteCodeGenerator();
 
-        List<ViewerToken> tokens = labels.stream()
-                .map(label -> new ViewerToken(
-                        UUID.randomUUID(),
-                        eventId,
-                        label,
-                        TokenGenerator.generate(),
-                        expiresAt
-                ))
+        return requests.stream()
+                .flatMap(request -> {
+                    int count = request.count() != null ? request.count() : 1;
+                    return java.util.stream.IntStream.range(0, count)
+                            .mapToObj(i -> {
+                                String code = generateUniqueCode(codeGenerator);
+                                return new ViewerToken(
+                                        UUID.randomUUID(),
+                                        eventId,
+                                        request.label(),
+                                        TokenGenerator.generate(),
+                                        code,
+                                        expiresAt
+                                );
+                            });
+                })
+                .map(viewerTokenRepository::save)
                 .collect(Collectors.toList());
+    }
 
-        return viewerTokenRepository.saveAll(tokens);
+    private String generateUniqueCode(InviteCodeGenerator codeGenerator) {
+        String code;
+        int attempts = 0;
+        do {
+            code = codeGenerator.generate();
+            attempts++;
+            if (attempts > 5) {
+                throw new RuntimeException("Could not generate unique invite code after 5 attempts");
+            }
+        } while (viewerTokenRepository.existsByCode(code));
+        return code;
+    }
+
+    @Override
+    public List<ViewerToken> getTokensByEventId(UUID eventId) {
+        return viewerTokenRepository.findByEventId(eventId);
     }
 
     @Override

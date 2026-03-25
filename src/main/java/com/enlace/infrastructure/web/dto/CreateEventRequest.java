@@ -8,5 +8,5 @@ import java.util.UUID;
 public record CreateEventRequest(
     @NotNull UUID customerId,
     @NotBlank String title,
-    @NotNull Instant scheduledAt
+    Instant scheduledAt
 ) {}

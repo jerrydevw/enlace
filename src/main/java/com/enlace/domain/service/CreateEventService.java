@@ -10,6 +10,7 @@ import com.enlace.shared.SlugGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -30,8 +31,8 @@ public class CreateEventService implements CreateEventUseCase {
     public Event create(CreateEventCommand command) {
         customerRepository.findById(command.customerId())
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + command.customerId()));
-
-        String baseSlug = SlugGenerator.generate(command.title(), command.scheduledAt());
+        Instant scheduledAt = Instant.now();
+        String baseSlug = SlugGenerator.generate(command.title(), scheduledAt);
         String slug = ensureUniqueSlug(baseSlug);
 
         Event event = new Event(
@@ -39,7 +40,7 @@ public class CreateEventService implements CreateEventUseCase {
                 command.customerId(),
                 slug,
                 command.title(),
-                command.scheduledAt()
+                scheduledAt
         );
 
         Event savedEvent = eventRepository.save(event);

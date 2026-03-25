@@ -12,4 +12,6 @@ public interface ViewerTokenRepository {
     Optional<ViewerToken> findByToken(String token);
     List<ViewerToken> findByEventId(UUID eventId);
     void deleteByEventId(UUID eventId);
+    Optional<ViewerToken> findByEventSlugAndCode(String slug, String code);
+    boolean existsByCode(String code);
 }

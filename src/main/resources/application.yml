@@ -8,13 +8,21 @@ spring:
     password: ${DATABASE_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: true
+    baseline-on-migrate: true     # útil na primeira execução ou em dev
+    validate-on-migrate: true
+    # Opcional: para ver mais detalhes no log
+    # logging:
+    #   level:
+    #     org.flywaydb: DEBUG
+
+    # resto das suas configs (cloud.aws, jwt, etc.)
   cloud:
     aws:
       credentials:
@@ -38,6 +46,11 @@ aws:
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
   viewer-token-ttl-hours: ${VIEWER_TOKEN_TTL_HOURS:72}
+  jwt:
+    secret: ${JWT_SECRET:enlace-super-secret-key-must-be-at-least-32-chars-long}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:4}
+  rate-limit:
+    max-attempts-per-minute: ${RATE_LIMIT_MAX_ATTEMPTS:10}
 api:
   key: ${ENLACE_API_KEY:enlace-dev-key-troque-em-prod}
 

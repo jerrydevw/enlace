@@ -4,6 +4,7 @@ import com.enlace.domain.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,10 +23,28 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, getErrorCode(ex), ex.getMessage());
     }
 
-    @ExceptionHandler({EventDeletionNotAllowedException.class, EventNotReadyException.class, IllegalStateException.class})
+    @ExceptionHandler({EventDeletionNotAllowedException.class, EventNotReadyException.class, EventNotLiveException.class, IllegalStateException.class})
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
         log.warn("Conflito de estado: {}", ex.getMessage());
         return buildResponse(HttpStatus.CONFLICT, getErrorCode(ex), ex.getMessage());
+    }
+
+    @ExceptionHandler({InvalidInviteCodeException.class, SessionRevokedException.class, JwtException.class})
+    public ResponseEntity<ErrorResponse> handleUnauthorized(RuntimeException ex) {
+        log.warn("Não autorizado: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNAUTHORIZED, getErrorCode(ex), ex.getMessage());
+    }
+
+    @ExceptionHandler(EventEndedException.class)
+    public ResponseEntity<ErrorResponse> handleGone(EventEndedException ex) {
+        log.warn("Recurso não disponível (Gone): {}", ex.getMessage());
+        return buildResponse(HttpStatus.GONE, "EVENT_ENDED", ex.getMessage());
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyRequests(RateLimitExceededException ex) {
+        log.warn("Rate limit excedido: {}", ex.getMessage());
+        return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMIT_EXCEEDED", ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -51,6 +70,10 @@ public class GlobalExceptionHandler {
         if (ex instanceof ViewerTokenNotFoundException) return "VIEWER_TOKEN_NOT_FOUND";
         if (ex instanceof EventDeletionNotAllowedException) return "EVENT_DELETION_NOT_ALLOWED";
         if (ex instanceof EventNotReadyException) return "EVENT_NOT_READY";
+        if (ex instanceof EventNotLiveException) return "EVENT_NOT_LIVE";
+        if (ex instanceof InvalidInviteCodeException) return "INVALID_INVITE_CODE";
+        if (ex instanceof SessionRevokedException) return "SESSION_REVOKED";
+        if (ex instanceof JwtException) return "INVALID_TOKEN";
         return "ILLEGAL_STATE";
     }
 
