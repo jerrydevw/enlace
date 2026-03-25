@@ -41,9 +41,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-            "http://localhost:3000",
-            "https://enlace.app",
-            "https://enlace-front-web.vercel.app"
+                "http://localhost:3000",
+                "https://livecasamento.com",
+                "https://www.livecasamento.com",
+                "https://*.vercel.app"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
