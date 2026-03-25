@@ -16,14 +16,16 @@ public class UpdateStreamStatusService implements UpdateStreamStatusUseCase {
     private static final Logger log = LoggerFactory.getLogger(UpdateStreamStatusService.class);
 
     private final EventRepository eventRepository;
+    private final com.enlace.domain.port.out.IvsGateway ivsGateway;
 
-    public UpdateStreamStatusService(EventRepository eventRepository) {
+    public UpdateStreamStatusService(EventRepository eventRepository, com.enlace.domain.port.out.IvsGateway ivsGateway) {
         this.eventRepository = eventRepository;
+        this.ivsGateway = ivsGateway;
     }
 
     @Override
     @Transactional
-    public void update(String channelName, String eventName) {
+    public void update(String channelName, String eventName, String streamId) {
         // channelName = slug do evento (usado como nome do canal IVS)
         Optional<Event> eventOpt = eventRepository.findBySlug(channelName);
 
@@ -41,9 +43,17 @@ public class UpdateStreamStatusService implements UpdateStreamStatusUseCase {
                 eventRepository.save(event);
             }
             case "Stream End" -> {
-                log.info("Marcando evento '{}' como ENDED", channelName);
+                log.info("Marcando evento '{}' como ENDED — streamId: {}", channelName, streamId);
                 event.markEnded();
                 eventRepository.save(event);
+
+                if (streamId != null && event.getRecordingS3Prefix() != null) {
+                    log.info("Buscando gravação para o evento '{}' (streamId: {})", channelName, streamId);
+                    ivsGateway.findRecording(event.getRecordingS3Prefix(), streamId).ifPresentOrElse(
+                        recording -> log.info("Gravação encontrada: {}", recording.masterPlaylistKey()),
+                        () -> log.warn("Gravação ainda não disponível para o streamId: {}", streamId)
+                    );
+                }
             }
             default -> log.warn("eventName '{}' nao reconhecido — ignorando", eventName);
         }

@@ -34,10 +34,10 @@ public class InternalController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        log.info("Evento IVS recebido — channel: '{}', event: '{}'",
-                request.channelName(), request.eventName());
+        log.info("Evento IVS recebido — channel: '{}', event: '{}', stream: '{}'",
+                request.channelName(), request.eventName(), request.streamId());
 
-        updateStreamStatusUseCase.update(request.channelName(), request.eventName());
+        updateStreamStatusUseCase.update(request.channelName(), request.eventName(), request.streamId());
 
         return ResponseEntity.ok().build();
     }

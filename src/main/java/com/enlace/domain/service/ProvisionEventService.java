@@ -23,6 +23,9 @@ public class ProvisionEventService implements ProvisionEventUseCase {
     private final StreamCredentialRepository streamCredentialRepository;
     private final IvsGateway ivsGateway;
 
+    @Value("${aws.account-id}")
+    private String accountId;
+
     public ProvisionEventService(EventRepository eventRepository,
                                  StreamCredentialRepository streamCredentialRepository,
                                  IvsGateway ivsGateway, @Value("${aws.ivs.recording-bucket}") String recordingBucket
@@ -48,10 +51,9 @@ public class ProvisionEventService implements ProvisionEventUseCase {
 
                 IvsGateway.IvsChannelResult result = ivsGateway.createChannel(event.getSlug());
                 log.info("Canal IVS criado: ARN={}, Endpoint={}", result.channelArn(), result.ingestEndpoint());
-                
-                String s3Prefix = "recordings/" + event.getSlug();
-                log.info("Configurando gravação para o canal: prefix={}", s3Prefix);
-                ivsGateway.configureRecording(result.channelArn(), s3Prefix);
+
+                String channelId = result.channelArn().substring(result.channelArn().lastIndexOf('/') + 1);
+                String s3Prefix = "ivs/v1/" + accountId + "/" + channelId;
 
                 event.markReady(result.channelArn(), result.ingestEndpoint(), result.playbackUrl(), s3Prefix);
                 eventRepository.save(event);
