@@ -20,4 +20,10 @@ public class JpaCustomerRepository implements CustomerRepository {
     public Optional<Customer> findById(UUID id) {
         return springDataCustomerRepository.findById(id).map(CustomerEntity::toDomain);
     }
+
+    @Override
+    public Customer save(Customer customer) {
+        CustomerEntity entity = CustomerEntity.fromDomain(customer);
+        return springDataCustomerRepository.save(entity).toDomain();
+    }
 }

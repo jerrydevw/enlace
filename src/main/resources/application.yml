@@ -18,6 +18,7 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true     # útil na primeira execução ou em dev
+    baseline-version: 0
     validate-on-migrate: true
     # Opcional: para ver mais detalhes no log
     # logging:
