@@ -31,8 +31,8 @@ public class CreateEventService implements CreateEventUseCase {
     public Event create(CreateEventCommand command) {
         customerRepository.findById(command.customerId())
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + command.customerId()));
-        Instant scheduledAt = Instant.now();
-        String baseSlug = SlugGenerator.generate(command.title(), scheduledAt);
+        
+        String baseSlug = SlugGenerator.generate(command.title(), command.scheduledAt());
         String slug = ensureUniqueSlug(baseSlug);
 
         Event event = new Event(
@@ -40,7 +40,7 @@ public class CreateEventService implements CreateEventUseCase {
                 command.customerId(),
                 slug,
                 command.title(),
-                scheduledAt
+                command.scheduledAt()
         );
 
         Event savedEvent = eventRepository.save(event);
