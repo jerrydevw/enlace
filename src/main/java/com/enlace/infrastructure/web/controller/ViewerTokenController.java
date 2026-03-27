@@ -1,6 +1,5 @@
 package com.enlace.infrastructure.web.controller;
 
-import com.enlace.domain.model.Event;
 import com.enlace.domain.model.ViewerToken;
 import com.enlace.domain.port.in.GetEventUseCase;
 import com.enlace.domain.port.in.ManageViewerTokensUseCase;

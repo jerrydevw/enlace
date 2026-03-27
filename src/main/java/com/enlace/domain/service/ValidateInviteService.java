@@ -72,7 +72,7 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
                 });
 
         if (token.isRevoked()) {
-            throw new InvalidInviteCodeException("Invite code revoked");
+            throw new InviteCodeAlreadyUsedException("Invite code already used");
         }
 
         if (token.getExpiresAt().isBefore(Instant.now())) {
@@ -95,6 +95,9 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
         session.setRevoked(false);
 
         viewerSessionRepository.save(session);
+
+        token.revoke();
+        viewerTokenRepository.save(token);
 
         return new ViewerSessionResult(
                 sessionToken,

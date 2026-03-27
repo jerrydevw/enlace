@@ -7,7 +7,9 @@ import com.enlace.domain.port.in.CreateEventUseCase;
 import com.enlace.domain.port.in.DeleteEventUseCase;
 import com.enlace.domain.port.in.GetCredentialsUseCase;
 import com.enlace.domain.port.in.GetEventUseCase;
+import com.enlace.domain.port.in.UpdateEventUseCase;
 import com.enlace.infrastructure.web.dto.CreateEventRequest;
+import com.enlace.infrastructure.web.dto.UpdateEventRequest;
 import com.enlace.infrastructure.web.dto.CredentialsResponse;
 import com.enlace.infrastructure.web.dto.EventResponse;
 import com.enlace.infrastructure.web.dto.IngestionUrlResponse;
@@ -28,13 +30,16 @@ public class EventController {
     private final GetEventUseCase getEventUseCase;
     private final DeleteEventUseCase deleteEventUseCase;
     private final GetCredentialsUseCase getCredentialsUseCase;
+    private final UpdateEventUseCase updateEventUseCase;
 
     public EventController(CreateEventUseCase createEventUseCase, GetEventUseCase getEventUseCase, 
-                           DeleteEventUseCase deleteEventUseCase, GetCredentialsUseCase getCredentialsUseCase) {
+                           DeleteEventUseCase deleteEventUseCase, GetCredentialsUseCase getCredentialsUseCase,
+                           UpdateEventUseCase updateEventUseCase) {
         this.createEventUseCase = createEventUseCase;
         this.getEventUseCase = getEventUseCase;
         this.deleteEventUseCase = deleteEventUseCase;
         this.getCredentialsUseCase = getCredentialsUseCase;
+        this.updateEventUseCase = updateEventUseCase;
     }
 
     @PostMapping
@@ -53,6 +58,18 @@ public class EventController {
     public ResponseEntity<EventResponse> get(@PathVariable UUID id) {
         log.info("Buscando evento por ID: {}", id);
         Event event = getEventUseCase.getById(id);
+        return ResponseEntity.ok(toResponse(event));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<EventResponse> update(@PathVariable UUID id, @Valid @RequestBody UpdateEventRequest request) {
+        log.info("Recebendo requisição para atualizar evento: {}", id);
+        Event event = updateEventUseCase.update(new UpdateEventUseCase.UpdateEventCommand(
+                id,
+                request.title(),
+                request.scheduledAt()
+        ));
+        log.info("Evento atualizado com sucesso: ID={}, Slug={}", event.getId(), event.getSlug());
         return ResponseEntity.ok(toResponse(event));
     }
 

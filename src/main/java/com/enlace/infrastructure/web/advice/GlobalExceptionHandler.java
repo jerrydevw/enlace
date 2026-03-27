@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, getErrorCode(ex), ex.getMessage());
     }
 
-    @ExceptionHandler({InvalidInviteCodeException.class, SessionRevokedException.class, JwtException.class})
+    @ExceptionHandler({InvalidInviteCodeException.class, InviteCodeAlreadyUsedException.class, SessionRevokedException.class, JwtException.class})
     public ResponseEntity<ErrorResponse> handleUnauthorized(RuntimeException ex) {
         log.warn("Não autorizado: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, getErrorCode(ex), ex.getMessage());
@@ -72,6 +72,7 @@ public class GlobalExceptionHandler {
         if (ex instanceof EventNotReadyException) return "EVENT_NOT_READY";
         if (ex instanceof EventNotLiveException) return "EVENT_NOT_LIVE";
         if (ex instanceof InvalidInviteCodeException) return "INVALID_INVITE_CODE";
+        if (ex instanceof InviteCodeAlreadyUsedException) return "INVITE_CODE_ALREADY_USED";
         if (ex instanceof SessionRevokedException) return "SESSION_REVOKED";
         if (ex instanceof JwtException) return "INVALID_TOKEN";
         return "ILLEGAL_STATE";
