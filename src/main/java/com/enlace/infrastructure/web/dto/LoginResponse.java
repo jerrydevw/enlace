@@ -12,7 +12,6 @@ public record LoginResponse(
         UUID id,
         String name,
         String email,
-        String plan,
         Instant createdAt
     ) {}
 }

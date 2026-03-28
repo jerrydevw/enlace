@@ -70,7 +70,8 @@ public class EventController {
         Event event = createEventUseCase.create(new CreateEventUseCase.CreateEventCommand(
                 customerId,
                 request.title(),
-                request.scheduledAt()
+                request.scheduledAt(),
+                request.plan()
         ));
         log.info("Evento criado com sucesso: ID={}, Slug={}", event.getId(), event.getSlug());
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(toResponse(event));
@@ -196,12 +197,19 @@ public class EventController {
 
     private EventResponse toResponse(Event event) {
         boolean liveStarted = event.getStatus() == EventStatus.LIVE || event.getStatus() == EventStatus.ENDED;
+        Map<String, Object> planLimits = Map.of(
+            "maxViewers", event.getPlan().getMaxViewersPerEvent(),
+            "recordingRetentionDays", event.getPlan().getRecordingRetentionDays(),
+            "price", event.getPlan().getPricePerEvent()
+        );
         return new EventResponse(
                 event.getId(),
                 event.getSlug(),
                 event.getTitle(),
                 event.getScheduledAt(),
                 event.getStatus(),
+                event.getPlan(),
+                planLimits,
                 liveStarted ? event.getIvsPlaybackUrl() : null,
                 event.getCreatedAt(),
                 event.getDeletedAt()

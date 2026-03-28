@@ -15,16 +15,14 @@ public class Customer {
     private UUID id;
     private String name;
     private String email;
-    private Plan plan;
     private String password;
     private Instant createdAt;
     private Instant deletedAt;
 
-    public Customer(UUID id, String name, String email, Plan plan, String password, Instant createdAt, Instant deletedAt) {
+    public Customer(UUID id, String name, String email, String password, Instant createdAt, Instant deletedAt) {
         this.id = id;
         this.name = name;
         this.email = email;
-        this.plan = plan;
         this.password = password;
         this.createdAt = createdAt;
         this.deletedAt = deletedAt;

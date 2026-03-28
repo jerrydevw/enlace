@@ -37,11 +37,9 @@ public class CreateEventService implements CreateEventUseCase {
     @Override
     @Transactional
     public Event create(CreateEventCommand command) {
-        var customer = customerRepository.findById(command.customerId())
+        customerRepository.findById(command.customerId())
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + command.customerId()));
         
-        planLimitsService.validateEventCreation(customer);
-
         String baseSlug = SlugGenerator.generate(command.title(), command.scheduledAt());
         String slug = ensureUniqueSlug(baseSlug);
 
@@ -50,7 +48,8 @@ public class CreateEventService implements CreateEventUseCase {
                 command.customerId(),
                 slug,
                 command.title(),
-                command.scheduledAt()
+                command.scheduledAt(),
+                command.plan()
         );
 
         Event savedEvent = eventRepository.saveAndFlush(event);

@@ -64,7 +64,6 @@ public class AuthController {
                 customer.getId(),
                 customer.getName(),
                 customer.getEmail(),
-                customer.getPlan().name(),
                 customer.getCreatedAt()
         );
     }

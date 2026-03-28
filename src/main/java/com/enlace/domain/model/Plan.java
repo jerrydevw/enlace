@@ -2,16 +2,32 @@ package com.enlace.domain.model;
 
 import lombok.Getter;
 
+import java.util.List;
+
 @Getter
 public enum Plan {
-    BASIC(1, 50),
-    PRO(10, 500);
+    BASIC("Plano Básico", 200, 60, 29.90, "BRL");
 
-    private final int maxActiveEvents;
-    private final int maxTokensPerEvent;
+    private final String displayName;
+    private final int maxViewersPerEvent;
+    private final int recordingRetentionDays;
+    private final double pricePerEvent;
+    private final String currency;
 
-    Plan(int maxActiveEvents, int maxTokensPerEvent) {
-        this.maxActiveEvents = maxActiveEvents;
-        this.maxTokensPerEvent = maxTokensPerEvent;
+    Plan(String displayName, int maxViewersPerEvent, int recordingRetentionDays,
+         double pricePerEvent, String currency) {
+        this.displayName = displayName;
+        this.maxViewersPerEvent = maxViewersPerEvent;
+        this.recordingRetentionDays = recordingRetentionDays;
+        this.pricePerEvent = pricePerEvent;
+        this.currency = currency;
+    }
+
+    public List<String> getFeatures() {
+        return List.of(
+                "Até " + maxViewersPerEvent + " espectadores simultâneos",
+                "Gravação disponível por " + recordingRetentionDays + " dias",
+                "R$ " + String.format("%.2f", pricePerEvent) + " por evento"
+        );
     }
 }

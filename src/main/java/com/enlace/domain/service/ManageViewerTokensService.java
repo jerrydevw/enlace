@@ -53,11 +53,8 @@ public class ManageViewerTokensService implements ManageViewerTokensUseCase {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException("Event not found: " + eventId));
 
-        var customer = customerRepository.findById(event.getCustomerId())
-                .orElseThrow(() -> new RuntimeException("Customer not found for event"));
-
         int requestedCount = requests.stream().mapToInt(r -> r.count() != null ? r.count() : 1).sum();
-        planLimitsService.validateTokenGeneration(eventId, requestedCount, customer);
+        planLimitsService.validateTokenGeneration(eventId, requestedCount);
 
         Instant expiresAt = Instant.now().plus(tokenTtlHours, ChronoUnit.HOURS);
         InviteCodeGenerator codeGenerator = new InviteCodeGenerator();
@@ -81,7 +78,7 @@ public class ManageViewerTokensService implements ManageViewerTokensUseCase {
                 .map(viewerTokenRepository::save)
                 .collect(Collectors.toList());
 
-        auditService.log(customer.getId(), "TOKEN_GENERATED", "EVENT", eventId, Map.of("count", tokens.size()));
+        auditService.log(event.getCustomerId(), "TOKEN_GENERATED", "EVENT", eventId, Map.of("count", tokens.size()));
 
         return tokens;
     }

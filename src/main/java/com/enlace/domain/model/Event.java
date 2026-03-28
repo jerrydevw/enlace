@@ -19,6 +19,7 @@ public class Event {
     private String title;
     private Instant scheduledAt;
     private EventStatus status;
+    private Plan plan;
     private String ivsChannelArn;
     private String ivsChannelIngestEndpoint;
     private String ivsPlaybackUrl;
@@ -27,12 +28,13 @@ public class Event {
     private Instant updatedAt;
     private Instant deletedAt;
  
-    public Event(UUID id, UUID customerId, String slug, String title, Instant scheduledAt) {
+    public Event(UUID id, UUID customerId, String slug, String title, Instant scheduledAt, Plan plan) {
         this.id = id;
         this.customerId = customerId;
         this.slug = slug;
         this.title = title;
         this.scheduledAt = scheduledAt;
+        this.plan = plan;
         this.status = EventStatus.CREATED;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();

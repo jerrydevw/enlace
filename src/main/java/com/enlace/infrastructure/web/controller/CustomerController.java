@@ -29,15 +29,13 @@ public class CustomerController {
         log.info("Recebendo requisição para cadastrar customer: {}", request.email());
         Customer customer = createCustomerUseCase.create(new CreateCustomerUseCase.CreateCustomerCommand(
             request.name(),
-            request.email(),
-            request.plan()
+            request.email()
         ));
         log.info("Customer cadastrado com sucesso: ID={}", customer.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(new CustomerResponse(
             customer.getId(),
             customer.getName(),
             customer.getEmail(),
-            customer.getPlan(),
             customer.getCreatedAt()
         ));
     }

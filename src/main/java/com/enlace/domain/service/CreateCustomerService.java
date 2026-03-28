@@ -25,7 +25,6 @@ public class CreateCustomerService implements CreateCustomerUseCase {
             UUID.randomUUID(),
             command.name(),
             command.email(),
-            command.plan(),
             "CHANGE_ME",
             Instant.now(),
             null

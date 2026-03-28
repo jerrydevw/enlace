@@ -29,6 +29,7 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
     private final ViewerTokenRepository viewerTokenRepository;
     private final ViewerSessionRepository viewerSessionRepository;
     private final JwtService jwtService;
+    private final PlanLimitsService planLimitsService;
 
     @Value("${app.rate-limit.max-attempts-per-minute:10}")
     private int maxAttemptsPerMinute;
@@ -41,11 +42,13 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
     public ValidateInviteService(EventRepository eventRepository,
                                   ViewerTokenRepository viewerTokenRepository,
                                   ViewerSessionRepository viewerSessionRepository,
-                                  JwtService jwtService) {
+                                  JwtService jwtService,
+                                  PlanLimitsService planLimitsService) {
         this.eventRepository = eventRepository;
         this.viewerTokenRepository = viewerTokenRepository;
         this.viewerSessionRepository = viewerSessionRepository;
         this.jwtService = jwtService;
+        this.planLimitsService = planLimitsService;
     }
 
     @Scheduled(fixedRate = 60000)
@@ -78,6 +81,12 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
         if (token.getExpiresAt().isBefore(Instant.now())) {
             throw new InvalidInviteCodeException("Invite code expired");
         }
+
+        // Validar limite de espectadores simultâneos
+        long activeViewers = viewerSessionRepository.findByEventId(event.getId()).stream()
+                .filter(s -> !s.isRevoked() && s.getExpiresAt().isAfter(Instant.now()))
+                .count();
+        planLimitsService.validateViewerLimit(event, (int) activeViewers);
 
         String jti = UUID.randomUUID().toString();
         String sessionToken = jwtService.generateViewerToken(token.getId(), event.getId(), event.getSlug(), jti);

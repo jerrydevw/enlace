@@ -1,9 +1,7 @@
 package com.enlace.domain.service;
 
 import com.enlace.domain.exception.PlanLimitExceededException;
-import com.enlace.domain.model.Customer;
 import com.enlace.domain.model.Event;
-import com.enlace.domain.model.EventStatus;
 import com.enlace.domain.model.ViewerToken;
 import com.enlace.domain.port.out.EventRepository;
 import com.enlace.domain.port.out.ViewerTokenRepository;
@@ -20,27 +18,27 @@ public class PlanLimitsService {
     private final EventRepository eventRepository;
     private final ViewerTokenRepository viewerTokenRepository;
 
-    public void validateEventCreation(Customer customer) {
-        List<Event> events = eventRepository.findByCustomerId(customer.getId());
-        
-        long activeEventsCount = events.stream()
-                .filter(e -> e.getDeletedAt() == null && e.getStatus() != EventStatus.ENDED)
-                .count();
-
-        if (activeEventsCount >= customer.getPlan().getMaxActiveEvents()) {
-            throw new PlanLimitExceededException("Limite de eventos ativos excedido para o plano " + customer.getPlan());
+    public void validateViewerLimit(Event event, int currentViewers) {
+        if (currentViewers >= event.getPlan().getMaxViewersPerEvent()) {
+            throw new PlanLimitExceededException(
+                "Limite de " + event.getPlan().getMaxViewersPerEvent() + 
+                " espectadores atingido para o plano " + event.getPlan()
+            );
         }
     }
 
-    public void validateTokenGeneration(UUID eventId, int requestedCount, Customer customer) {
+    public void validateTokenGeneration(UUID eventId, int requestedCount) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("Evento não encontrado: " + eventId));
+                
         List<ViewerToken> existingTokens = viewerTokenRepository.findByEventId(eventId);
         
         long nonRevokedTokens = existingTokens.stream()
                 .filter(t -> !t.isRevoked() && t.getDeletedAt() == null)
                 .count();
 
-        if (nonRevokedTokens + requestedCount > customer.getPlan().getMaxTokensPerEvent()) {
-            throw new PlanLimitExceededException("Limite de tokens por evento excedido para o plano " + customer.getPlan());
+        if (nonRevokedTokens + requestedCount > event.getPlan().getMaxViewersPerEvent()) {
+            throw new PlanLimitExceededException("Limite de tokens por evento excedido para o plano " + event.getPlan());
         }
     }
 }

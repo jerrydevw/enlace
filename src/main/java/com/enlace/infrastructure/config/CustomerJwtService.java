@@ -50,7 +50,6 @@ public class CustomerJwtService {
                 .subject(customer.getId().toString())
                 .claim("type", "USER")
                 .claim("email", customer.getEmail())
-                .claim("plan", customer.getPlan().name())
                 .claim("roles", "ROLE_CUSTOMER")
                 .build();
 

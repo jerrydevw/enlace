@@ -2,6 +2,7 @@ package com.enlace.infrastructure.persistence;
  
 import com.enlace.domain.model.Event;
 import com.enlace.domain.model.EventStatus;
+import com.enlace.domain.model.Plan;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,7 +34,11 @@ public class EventEntity {
  
     @Column(name = "scheduled_at", nullable = false)
     private Instant scheduledAt;
- 
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Plan plan;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private EventStatus status;
@@ -67,6 +72,7 @@ public class EventEntity {
         entity.slug = event.getSlug();
         entity.title = event.getTitle();
         entity.scheduledAt = event.getScheduledAt();
+        entity.plan = event.getPlan();
         entity.status = event.getStatus();
         entity.ivsChannelArn = event.getIvsChannelArn();
         entity.ivsChannelIngestEndpoint = event.getIvsChannelIngestEndpoint();
@@ -85,6 +91,7 @@ public class EventEntity {
         event.setSlug(slug);
         event.setTitle(title);
         event.setScheduledAt(scheduledAt);
+        event.setPlan(plan);
         event.setStatus(status);
         event.setIvsChannelArn(ivsChannelArn);
         event.setIvsChannelIngestEndpoint(ivsChannelIngestEndpoint);

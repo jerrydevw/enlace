@@ -8,7 +8,6 @@ public interface CreateCustomerUseCase {
 
     record CreateCustomerCommand(
         String name,
-        String email,
-        Plan plan
+        String email
     ) {}
 }

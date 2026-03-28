@@ -32,7 +32,6 @@ public class AuthenticateCustomerService implements AuthenticateCustomerUseCase 
                 UUID.randomUUID(),
                 command.name(),
                 command.email(),
-                Plan.BASIC,
                 passwordEncoder.encode(command.password()),
                 Instant.now(),
                 null

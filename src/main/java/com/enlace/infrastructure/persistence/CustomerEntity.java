@@ -1,7 +1,6 @@
 package com.enlace.infrastructure.persistence;
  
 import com.enlace.domain.model.Customer;
-import com.enlace.domain.model.Plan;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,10 +30,6 @@ public class CustomerEntity {
     @Column(nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Plan plan;
- 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
  
@@ -48,13 +43,12 @@ public class CustomerEntity {
         entity.name = customer.getName();
         entity.email = customer.getEmail();
         entity.password = customer.getPassword();
-        entity.plan = customer.getPlan();
         entity.createdAt = customer.getCreatedAt();
         entity.deletedAt = customer.getDeletedAt();
         return entity;
     }
 
     public Customer toDomain() {
-        return new Customer(id, name, email, plan, password, createdAt, deletedAt);
+        return new Customer(id, name, email, password, createdAt, deletedAt);
     }
 }
