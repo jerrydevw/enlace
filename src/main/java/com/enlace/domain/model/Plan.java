@@ -6,7 +6,8 @@ import java.util.List;
 
 @Getter
 public enum Plan {
-    BASIC("Plano Básico", 200, 60, 29.90, "BRL");
+    BASIC("Plano Básico", 10, 5, 29.90, "BRL"),
+    PREMIUM("Plano Premium", 50, 20, 69.90, "BRL");
 
     private final String displayName;
     private final int maxViewersPerEvent;
