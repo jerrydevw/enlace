@@ -29,10 +29,16 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, getErrorCode(ex), ex.getMessage());
     }
 
-    @ExceptionHandler({InvalidInviteCodeException.class, InviteCodeAlreadyUsedException.class, SessionRevokedException.class, JwtException.class})
+    @ExceptionHandler({InvalidInviteCodeException.class, InviteCodeAlreadyUsedException.class, SessionRevokedException.class, JwtException.class, InvalidCredentialsException.class})
     public ResponseEntity<ErrorResponse> handleUnauthorized(RuntimeException ex) {
         log.warn("Não autorizado: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNAUTHORIZED, getErrorCode(ex), ex.getMessage());
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
+        log.warn("Email já existe: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS", ex.getMessage());
     }
 
     @ExceptionHandler(EventEndedException.class)
@@ -92,6 +98,7 @@ public class GlobalExceptionHandler {
         if (ex instanceof InvalidInviteCodeException) return "INVALID_INVITE_CODE";
         if (ex instanceof InviteCodeAlreadyUsedException) return "INVITE_CODE_ALREADY_USED";
         if (ex instanceof SessionRevokedException) return "SESSION_REVOKED";
+        if (ex instanceof InvalidCredentialsException) return "INVALID_CREDENTIALS";
         if (ex instanceof JwtException) return "INVALID_TOKEN";
         return "ILLEGAL_STATE";
     }

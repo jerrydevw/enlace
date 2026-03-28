@@ -2,7 +2,6 @@ package com.enlace.infrastructure.config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -29,13 +28,14 @@ public class CustomerJwtAuthFilter extends OncePerRequestFilter {
 
         log.debug("CustomerJwtAuthFilter processando: {} {}", request.getMethod(), request.getRequestURI());
 
-        String token = extractToken(request);
-        if (token == null) {
-            log.debug("Nenhum token encontrado (header ou cookie)");
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("Nenhum token encontrado no header Authorization");
             chain.doFilter(request, response);
             return;
         }
 
+        String token = authHeader.substring(7);
         log.debug("Token encontrado, tentando decodificar...");
 
         try {
@@ -54,32 +54,12 @@ public class CustomerJwtAuthFilter extends OncePerRequestFilter {
             log.debug("CustomerAuthentication configurada no SecurityContext");
 
         } catch (JwtException e) {
-            log.warn("Falha ao decodificar token JWT: {}", e.getMessage(), e);
+            log.debug("Falha ao decodificar token JWT de customer: {}", e.getMessage());
             // Se falhar aqui, pode ser um token de Viewer, então deixamos passar para o próximo filtro
         } catch (Exception e) {
             log.error("Erro inesperado ao processar token: {}", e.getMessage(), e);
         }
 
         chain.doFilter(request, response);
-    }
-
-    private String extractToken(HttpServletRequest request) {
-        // Tenta extrair do header Authorization
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
-        }
-
-        // Tenta extrair do cookie access_token
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("access_token".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
-        }
-
-        return null;
     }
 }

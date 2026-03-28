@@ -1,5 +1,7 @@
 package com.enlace.domain.service;
 
+import com.enlace.domain.exception.EmailAlreadyExistsException;
+import com.enlace.domain.exception.InvalidCredentialsException;
 import com.enlace.domain.model.Customer;
 import com.enlace.domain.model.Plan;
 import com.enlace.domain.port.in.AuthenticateCustomerUseCase;
@@ -23,7 +25,7 @@ public class AuthenticateCustomerService implements AuthenticateCustomerUseCase 
     @Override
     public Customer register(RegisterCommand command) {
         if (customerRepository.findByEmail(command.email()).isPresent()) {
-            throw new IllegalArgumentException("Email já cadastrado");
+            throw new EmailAlreadyExistsException("Email já cadastrado");
         }
 
         Customer customer = new Customer(
@@ -42,10 +44,10 @@ public class AuthenticateCustomerService implements AuthenticateCustomerUseCase 
     @Override
     public LoginResult login(LoginCommand command) {
         Customer customer = customerRepository.findByEmail(command.email())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciais inválidas"));
+                .orElseThrow(() -> new InvalidCredentialsException("Credenciais inválidas"));
 
         if (!passwordEncoder.matches(command.password(), customer.getPassword())) {
-            throw new IllegalArgumentException("Credenciais inválidas");
+            throw new InvalidCredentialsException("Credenciais inválidas");
         }
 
         String accessToken = jwtService.generateToken(customer);
