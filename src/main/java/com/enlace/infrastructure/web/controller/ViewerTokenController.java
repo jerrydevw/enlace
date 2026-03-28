@@ -30,9 +30,6 @@ public class ViewerTokenController {
     private final GetEventUseCase getEventUseCase;
     private final EventOwnershipValidator ownershipValidator;
 
-    @Value("${app.base-url:http://localhost:8080}")
-    private String baseUrl;
-
     public ViewerTokenController(ManageViewerTokensUseCase manageViewerTokensUseCase, 
                                GetEventUseCase getEventUseCase,
                                EventOwnershipValidator ownershipValidator) {
