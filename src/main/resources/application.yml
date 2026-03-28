@@ -35,6 +35,10 @@ spring:
         static: ${AWS_REGION:}
 
 aws:
+  secrets:
+    jwt-private-key-arn: arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/private-key-EGC081
+    jwt-public-key-arn: arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/public-key-RaVk4C
+    jwt-secret-arn: arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/secret-ldIMkg
   account-id: ${AWS_ACCOUNT_ID:}
   region: ${AWS_REGION:}
   access-key: ${AWS_ACCESS_KEY_ID:}
