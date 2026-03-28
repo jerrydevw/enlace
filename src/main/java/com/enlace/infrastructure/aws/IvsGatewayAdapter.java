@@ -75,6 +75,7 @@ public class IvsGatewayAdapter implements IvsGateway {
     public void deleteChannel(String channelArn, String streamKeyArn) {
         log.info("Chamando AWS IVS para deletar canal: {}", channelArn);
 
+        // Verifica se o canal está transmitindo antes de deletar
         try {
             GetStreamResponse stream = ivsClient.getStream(
                     GetStreamRequest.builder().channelArn(channelArn).build()
@@ -82,26 +83,34 @@ public class IvsGatewayAdapter implements IvsGateway {
             if (stream.stream().state() == StreamState.LIVE) {
                 throw new IllegalStateException("Cannot delete a live channel");
             }
-        } catch (StreamUnavailableException e) {
-            // Stream nao ativo, pode deletar
+        } catch (StreamUnavailableException | ChannelNotBroadcastingException e) {
+            // Stream não ativo ou canal não está transmitindo - pode deletar
             log.debug("Stream não ativo para o canal {}, prosseguindo com a deleção", channelArn);
         }
 
+        // Deleta a stream key primeiro (se existir)
         if (streamKeyArn != null) {
             try {
                 ivsClient.deleteStreamKey(DeleteStreamKeyRequest.builder()
                         .arn(streamKeyArn)
                         .build());
+                log.debug("Stream key deletada: {}", streamKeyArn);
             } catch (Exception e) {
                 log.warn("Erro ao deletar stream key {}: {}", streamKeyArn, e.getMessage());
-                // Log and continue
+                // Continua mesmo se falhar - a stream key pode já ter sido deletada
             }
         }
-        
-        ivsClient.deleteChannel(DeleteChannelRequest.builder()
-                .arn(channelArn)
-                .build());
-        log.info("Canal IVS deletado com sucesso na AWS: {}", channelArn);
+
+        // Deleta o canal
+        try {
+            ivsClient.deleteChannel(DeleteChannelRequest.builder()
+                    .arn(channelArn)
+                    .build());
+            log.info("Canal IVS deletado com sucesso na AWS: {}", channelArn);
+        } catch (ChannelNotBroadcastingException e) {
+            // Ignora se o canal não está transmitindo - não é um erro para deleção
+            log.debug("Canal não estava transmitindo durante deleção: {}", channelArn);
+        }
     }
 
     @Override
