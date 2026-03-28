@@ -50,6 +50,7 @@ aws:
 
   sqs:
     provisioning-queue-url: ${SQS_PROVISIONING_QUEUE_URL:}
+    ivs-events-queue-url: ${SQS_IVS_EVENTS_QUEUE_URL:}
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:8080}

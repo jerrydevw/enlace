@@ -25,7 +25,7 @@ public class JwtService {
     private final int viewerTokenTtlHours;
 
     public JwtService(
-            @Value("${app.jwt.secret:}") String jwtSecret,
+            String jwtSecret,
             PrivateKey privateKey,
             PublicKey publicKey,
             @Value("${app.jwt.expiration-hours}") int expirationHours,

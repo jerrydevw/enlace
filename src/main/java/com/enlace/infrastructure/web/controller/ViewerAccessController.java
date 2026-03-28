@@ -40,7 +40,7 @@ public class ViewerAccessController {
             @RequestBody Map<String, String> body,
             HttpServletRequest request) {
         
-        String code = body.get("code");
+        String code = body.get("inviteCode");
         log.info("Tentativa de acesso ao evento: {} com código: {}", slug, code);
 
         ValidateInviteCodeUseCase.ViewerSessionResult result = validateInviteCodeUseCase.validate(
