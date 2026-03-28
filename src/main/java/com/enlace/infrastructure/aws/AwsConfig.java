@@ -48,10 +48,10 @@ public class AwsConfig {
     }
 
     @Bean
-    public SecretsManagerClient secretsManagerClient() {
+    public SecretsManagerClient secretsManagerClient(AwsProperties props) {
         return SecretsManagerClient.builder()
-                .region(Region.US_EAST_1)
-                .credentialsProvider(DefaultCredentialsProvider.create()) // usa a IAM Role do ECS automaticamente
+                .region(Region.of(props.getRegion()))
+                .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
     }
 
