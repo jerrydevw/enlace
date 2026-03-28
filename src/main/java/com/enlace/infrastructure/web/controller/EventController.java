@@ -10,8 +10,7 @@ import com.enlace.domain.port.in.GetEventUseCase;
 import com.enlace.domain.port.in.UpdateEventUseCase;
 import com.enlace.domain.port.in.ViewerHeartbeatUseCase;
 import com.enlace.domain.service.EventOwnershipValidator;
-import com.enlace.infrastructure.config.CustomerAuthentication;
-import com.enlace.infrastructure.config.ViewerAuthentication;
+import com.enlace.infrastructure.config.SecurityUtils;
 import com.enlace.infrastructure.web.dto.CreateEventRequest;
 import com.enlace.infrastructure.web.dto.UpdateEventRequest;
 import com.enlace.infrastructure.web.dto.CredentialsResponse;
@@ -26,7 +25,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -66,12 +64,11 @@ public class EventController {
     @ApiResponse(responseCode = "202", description = "Evento aceito e provisionamento iniciado")
     @ApiResponse(responseCode = "401", description = "Não autenticado")
     @ApiResponse(responseCode = "422", description = "Limite de plano excedido ou dados inválidos")
-    public ResponseEntity<EventResponse> create(
-            @Valid @RequestBody CreateEventRequest request,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
+    public ResponseEntity<EventResponse> create(@Valid @RequestBody CreateEventRequest request) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
         log.info("Recebendo requisição para criar evento: {}", request.title());
         Event event = createEventUseCase.create(new CreateEventUseCase.CreateEventCommand(
-                auth.getCustomerId(),
+                customerId,
                 request.title(),
                 request.scheduledAt()
         ));
@@ -82,10 +79,10 @@ public class EventController {
     @GetMapping
     @Operation(summary = "Listar eventos", description = "Retorna os eventos do customer autenticado com suporte a paginação.")
     public ResponseEntity<PagedResponse<EventResponse>> list(
-            @AuthenticationPrincipal CustomerAuthentication auth,
             @PageableDefault(size = 20, sort = "scheduledAt") Pageable pageable) {
-        log.info("Listando eventos para o customer: {} - Page: {}, Size: {}", auth.getCustomerId(), pageable.getPageNumber(), pageable.getPageSize());
-        Page<Event> eventsPage = getEventUseCase.listByCustomerId(auth.getCustomerId(), pageable);
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
+        log.info("Listando eventos para o customer: {} - Page: {}, Size: {}", customerId, pageable.getPageNumber(), pageable.getPageSize());
+        Page<Event> eventsPage = getEventUseCase.listByCustomerId(customerId, pageable);
         
         List<EventResponse> content = eventsPage.getContent().stream()
                 .map(this::toResponse)
@@ -104,11 +101,10 @@ public class EventController {
     @Operation(summary = "Obter evento por ID", description = "Retorna os detalhes de um evento específico.")
     @ApiResponse(responseCode = "403", description = "Acesso negado (não é dono do evento)")
     @ApiResponse(responseCode = "404", description = "Evento não encontrado")
-    public ResponseEntity<EventResponse> get(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
+    public ResponseEntity<EventResponse> get(@PathVariable UUID id) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
         log.info("Buscando evento por ID: {}", id);
-        ownershipValidator.validate(id, auth.getCustomerId());
+        ownershipValidator.validate(id, customerId);
         Event event = getEventUseCase.getById(id);
         return ResponseEntity.ok(toResponse(event));
     }
@@ -116,11 +112,11 @@ public class EventController {
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar evento", description = "Atualiza os dados de um evento.")
     public ResponseEntity<EventResponse> update(
-            @PathVariable UUID id, 
-            @Valid @RequestBody UpdateEventRequest request,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateEventRequest request) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
         log.info("Recebendo requisição para atualizar evento: {}", id);
-        ownershipValidator.validate(id, auth.getCustomerId());
+        ownershipValidator.validate(id, customerId);
         Event event = updateEventUseCase.update(new UpdateEventUseCase.UpdateEventCommand(
                 id,
                 request.title(),
@@ -132,11 +128,10 @@ public class EventController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Deletar evento", description = "Remove um evento.")
-    public ResponseEntity<Void> delete(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
         log.info("Recebendo requisição para deletar evento: {}", id);
-        ownershipValidator.validate(id, auth.getCustomerId());
+        ownershipValidator.validate(id, customerId);
         deleteEventUseCase.delete(id);
         log.info("Evento deletado com sucesso: {}", id);
         return ResponseEntity.noContent().build();
@@ -144,11 +139,10 @@ public class EventController {
 
     @GetMapping("/{id}/credentials")
     @Operation(summary = "Obter credenciais de stream", description = "Retorna o endpoint RTMP e a chave de transmissão para o software de live (ex: OBS).")
-    public ResponseEntity<CredentialsResponse> getCredentials(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
+    public ResponseEntity<CredentialsResponse> getCredentials(@PathVariable UUID id) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
         log.info("Buscando credenciais para o evento: {}", id);
-        ownershipValidator.validate(id, auth.getCustomerId());
+        ownershipValidator.validate(id, customerId);
         StreamCredential credential = getCredentialsUseCase.getCredentials(id);
         return ResponseEntity.ok(new CredentialsResponse(
                 credential.getRtmpEndpoint(),
@@ -160,11 +154,10 @@ public class EventController {
 
     @GetMapping("/{id}/ingestion-url")
     @Operation(summary = "Obter URL de ingestão formatada", description = "Retorna a URL completa rtmps://... para facilitar a configuração.")
-    public ResponseEntity<IngestionUrlResponse> getIngestionUrl(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
+    public ResponseEntity<IngestionUrlResponse> getIngestionUrl(@PathVariable UUID id) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
         log.info("Buscando URL de ingestão para o evento: {}", id);
-        ownershipValidator.validate(id, auth.getCustomerId());
+        ownershipValidator.validate(id, customerId);
         Event event = getEventUseCase.getById(id);
         
         if (event.getStatus() != EventStatus.READY && event.getStatus() != EventStatus.LIVE && event.getStatus() != EventStatus.ENDED) {
@@ -185,19 +178,18 @@ public class EventController {
 
     @PostMapping("/{slug}/heartbeat")
     @Operation(summary = "Registrar heartbeat do viewer", description = "Endpoint para o viewer enviar ping a cada 30s.")
-    public ResponseEntity<Void> heartbeat(
-            @PathVariable String slug,
-            @AuthenticationPrincipal ViewerAuthentication auth) {
-        heartbeatUseCase.registerHeartbeat(auth.getSessionId(), auth.getEventId());
+    public ResponseEntity<Void> heartbeat(@PathVariable String slug) {
+        UUID sessionId = SecurityUtils.getCurrentViewerSessionId();
+        UUID eventId = SecurityUtils.getCurrentViewer().getEventId();
+        heartbeatUseCase.registerHeartbeat(sessionId, eventId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/viewers/count")
     @Operation(summary = "Contar viewers ativos", description = "Retorna a quantidade de convidados assistindo a live no momento.")
-    public ResponseEntity<Map<String, Long>> countViewers(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal CustomerAuthentication auth) {
-        ownershipValidator.validate(id, auth.getCustomerId());
+    public ResponseEntity<Map<String, Long>> countViewers(@PathVariable UUID id) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
+        ownershipValidator.validate(id, customerId);
         long count = heartbeatUseCase.countActiveViewers(id);
         return ResponseEntity.ok(Map.of("activeViewers", count));
     }

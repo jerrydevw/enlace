@@ -51,6 +51,15 @@ public class JwtViewerAuthFilter extends OncePerRequestFilter {
 
         try {
             JWTClaimsSet claims = jwtService.validateAndParse(token);
+            String type = (String) claims.getClaim("type");
+
+            // Este filtro processa apenas tokens de viewer
+            if (!"viewer".equals(type)) {
+                log.debug("Token não é de viewer (type={}), pulando filtro", type);
+                chain.doFilter(request, response);
+                return;
+            }
+
             String jti = claims.getJWTID();
             log.debug("JWT JTI encontrado: {}", jti);
 

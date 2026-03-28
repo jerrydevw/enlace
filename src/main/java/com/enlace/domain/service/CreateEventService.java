@@ -53,7 +53,7 @@ public class CreateEventService implements CreateEventUseCase {
                 command.scheduledAt()
         );
 
-        Event savedEvent = eventRepository.save(event);
+        Event savedEvent = eventRepository.saveAndFlush(event);
         provisioningPublisher.publishProvisioningJob(savedEvent.getId());
 
         auditService.log(command.customerId(), "EVENT_CREATED", "EVENT", savedEvent.getId(), null);

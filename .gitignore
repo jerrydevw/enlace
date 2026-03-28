@@ -31,3 +31,13 @@ build/
 
 ### VS Code ###
 .vscode/
+
+.env
+
+api-examples.http
+
+ARCHITECTURE.md
+
+Enlace-Lives-API.postman_collection.json
+
+docker-compose.yml

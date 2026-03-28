@@ -27,6 +27,12 @@ public class JpaEventRepository implements EventRepository {
     }
 
     @Override
+    public Event saveAndFlush(Event event) {
+        EventEntity entity = EventEntity.fromDomain(event);
+        return springDataEventRepository.saveAndFlush(entity).toDomain();
+    }
+
+    @Override
     public Optional<Event> findById(UUID id) {
         return springDataEventRepository.findById(id).map(EventEntity::toDomain);
     }

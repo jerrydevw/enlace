@@ -28,6 +28,11 @@ public class CustomerAuthentication extends AbstractAuthenticationToken {
 
     @Override
     public Object getPrincipal() {
-        return customerId;
+        return this;
+    }
+
+    @Override
+    public String getName() {
+        return customerId.toString();
     }
 }

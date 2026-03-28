@@ -1,6 +1,8 @@
 package com.enlace.infrastructure.aws;
 
+import com.enlace.domain.exception.MessagePublishingException;
 import com.enlace.domain.port.out.ProvisioningPublisher;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.sqs.SqsAsyncClient;
@@ -9,6 +11,7 @@ import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.UUID;
 
+@Slf4j
 @Component
 public class SqsProvisioningPublisher implements ProvisioningPublisher {
 
@@ -23,16 +26,22 @@ public class SqsProvisioningPublisher implements ProvisioningPublisher {
 
     @Override
     public void publishProvisioningJob(UUID eventId) {
+        log.info("Publicando job de provisionamento para evento: {}", eventId);
+
         SendMessageRequest request = SendMessageRequest.builder()
                 .queueUrl(queueUrl)
                 .messageBody(eventId.toString())
                 .build();
 
         try {
-            sqsAsyncClient.sendMessage(request);
+            sqsAsyncClient.sendMessage(request).join();
+            log.info("Job de provisionamento publicado com sucesso para evento: {}", eventId);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Falha ao publicar job de provisionamento para evento {}: {}", eventId, ex.getMessage(), ex);
+            throw new MessagePublishingException(
+                String.format("Falha ao publicar mensagem de provisionamento para evento %s", eventId),
+                ex
+            );
         }
-
     }
 }

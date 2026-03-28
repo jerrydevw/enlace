@@ -42,8 +42,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/events/*/playback-url").authenticated()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(customerJwtFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(viewerJwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(viewerJwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(customerJwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

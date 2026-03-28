@@ -59,6 +59,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "RATE_LIMIT_EXCEEDED", ex.getMessage());
     }
 
+    @ExceptionHandler(MessagePublishingException.class)
+    public ResponseEntity<ErrorResponse> handleMessagePublishing(MessagePublishingException ex) {
+        log.error("Falha ao publicar mensagem: {}", ex.getMessage(), ex);
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "MESSAGE_PUBLISHING_FAILED", "Failed to publish message to queue");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         log.warn("Erro de validação: {}", ex.getMessage());
