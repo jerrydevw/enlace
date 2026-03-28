@@ -1,5 +1,7 @@
 package com.enlace.domain.service;
 
+import com.enlace.domain.exception.EmailAlreadyExistsException;
+import com.enlace.domain.exception.InvalidCredentialsException;
 import com.enlace.domain.model.Customer;
 import com.enlace.domain.model.Plan;
 import com.enlace.domain.port.in.AuthenticateCustomerUseCase;
@@ -62,7 +64,7 @@ class AuthenticateCustomerServiceTest {
     void register_ShouldThrowException_WhenEmailAlreadyExists() {
         when(customerRepository.findByEmail(registerCommand.email())).thenReturn(Optional.of(customer));
 
-        assertThrows(IllegalArgumentException.class, () -> authenticateCustomerService.register(registerCommand));
+        assertThrows(EmailAlreadyExistsException.class, () -> authenticateCustomerService.register(registerCommand));
         verify(customerRepository, never()).save(any(Customer.class));
     }
 
@@ -85,7 +87,7 @@ class AuthenticateCustomerServiceTest {
     void login_ShouldThrowException_WhenEmailNotFound() {
         when(customerRepository.findByEmail(loginCommand.email())).thenReturn(Optional.empty());
 
-        assertThrows(IllegalArgumentException.class, () -> authenticateCustomerService.login(loginCommand));
+        assertThrows(InvalidCredentialsException.class, () -> authenticateCustomerService.login(loginCommand));
     }
 
     @Test
@@ -93,6 +95,6 @@ class AuthenticateCustomerServiceTest {
         when(customerRepository.findByEmail(loginCommand.email())).thenReturn(Optional.of(customer));
         when(passwordEncoder.matches(loginCommand.password(), customer.getPassword())).thenReturn(false);
 
-        assertThrows(IllegalArgumentException.class, () -> authenticateCustomerService.login(loginCommand));
+        assertThrows(InvalidCredentialsException.class, () -> authenticateCustomerService.login(loginCommand));
     }
 }
