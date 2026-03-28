@@ -10,4 +10,5 @@ public interface SpringDataViewerSessionRepository extends JpaRepository<ViewerS
     @EntityGraph(attributePaths = {"viewerToken", "event"})
     Optional<ViewerSessionEntity> findByJti(String jti);
     List<ViewerSessionEntity> findByEventId(UUID eventId);
+    void deleteByEventId(UUID eventId);
 }

@@ -40,4 +40,9 @@ public class JpaViewerSessionRepository implements ViewerSessionRepository {
     public Optional<ViewerSession> findById(UUID id) {
         return springDataViewerSessionRepository.findById(id).map(ViewerSessionEntity::toDomain);
     }
+
+    @Override
+    public void deleteByEventId(UUID eventId) {
+        springDataViewerSessionRepository.deleteByEventId(eventId);
+    }
 }

@@ -10,4 +10,5 @@ public interface ViewerSessionRepository {
     Optional<ViewerSession> findByJti(String jti);
     List<ViewerSession> findByEventId(UUID eventId);
     Optional<ViewerSession> findById(UUID id);
+    void deleteByEventId(UUID eventId);
 }
