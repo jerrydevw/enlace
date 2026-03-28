@@ -2,6 +2,8 @@ package com.enlace.infrastructure.persistence;
 
 import com.enlace.domain.model.ViewerToken;
 import com.enlace.domain.port.out.ViewerTokenRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -49,6 +51,12 @@ public class JpaViewerTokenRepository implements ViewerTokenRepository {
         return springDataViewerTokenRepository.findByEventId(eventId).stream()
                 .map(ViewerTokenEntity::toDomain)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<ViewerToken> findByEventId(UUID eventId, Pageable pageable) {
+        return springDataViewerTokenRepository.findByEventId(eventId, pageable)
+                .map(ViewerTokenEntity::toDomain);
     }
 
     @Override

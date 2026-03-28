@@ -27,7 +27,10 @@ public class CustomerEntity {
  
     @Column(nullable = false, unique = true)
     private String email;
- 
+
+    @Column(nullable = false)
+    private String password;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Plan plan;
@@ -44,13 +47,14 @@ public class CustomerEntity {
         entity.id = customer.getId();
         entity.name = customer.getName();
         entity.email = customer.getEmail();
+        entity.password = customer.getPassword();
         entity.plan = customer.getPlan();
         entity.createdAt = customer.getCreatedAt();
         entity.deletedAt = customer.getDeletedAt();
         return entity;
     }
- 
+
     public Customer toDomain() {
-        return new Customer(id, name, email, plan, createdAt, deletedAt);
+        return new Customer(id, name, email, plan, password, createdAt, deletedAt);
     }
 }

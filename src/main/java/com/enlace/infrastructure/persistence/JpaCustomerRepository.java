@@ -22,6 +22,11 @@ public class JpaCustomerRepository implements CustomerRepository {
     }
 
     @Override
+    public Optional<Customer> findByEmail(String email) {
+        return springDataCustomerRepository.findByEmail(email).map(CustomerEntity::toDomain);
+    }
+
+    @Override
     public Customer save(Customer customer) {
         CustomerEntity entity = CustomerEntity.fromDomain(customer);
         return springDataCustomerRepository.save(entity).toDomain();

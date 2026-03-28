@@ -80,7 +80,7 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
         }
 
         String jti = UUID.randomUUID().toString();
-        String sessionToken = jwtService.generateToken(token.getId(), event.getId(), event.getSlug(), jti);
+        String sessionToken = jwtService.generateViewerToken(token.getId(), event.getId(), event.getSlug(), jti);
         Instant expiresAt = Instant.now().plus(jwtExpirationHours, ChronoUnit.HOURS);
 
         ViewerSession session = new ViewerSession();

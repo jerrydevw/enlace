@@ -19,19 +19,29 @@ public class CreateEventService implements CreateEventUseCase {
     private final EventRepository eventRepository;
     private final CustomerRepository customerRepository;
     private final ProvisioningPublisher provisioningPublisher;
+    private final PlanLimitsService planLimitsService;
+    private final AuditService auditService;
 
-    public CreateEventService(EventRepository eventRepository, CustomerRepository customerRepository, ProvisioningPublisher provisioningPublisher) {
+    public CreateEventService(EventRepository eventRepository, 
+                            CustomerRepository customerRepository, 
+                            ProvisioningPublisher provisioningPublisher,
+                            PlanLimitsService planLimitsService,
+                            AuditService auditService) {
         this.eventRepository = eventRepository;
         this.customerRepository = customerRepository;
         this.provisioningPublisher = provisioningPublisher;
+        this.planLimitsService = planLimitsService;
+        this.auditService = auditService;
     }
 
     @Override
     @Transactional
     public Event create(CreateEventCommand command) {
-        customerRepository.findById(command.customerId())
+        var customer = customerRepository.findById(command.customerId())
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + command.customerId()));
         
+        planLimitsService.validateEventCreation(customer);
+
         String baseSlug = SlugGenerator.generate(command.title(), command.scheduledAt());
         String slug = ensureUniqueSlug(baseSlug);
 
@@ -45,6 +55,8 @@ public class CreateEventService implements CreateEventUseCase {
 
         Event savedEvent = eventRepository.save(event);
         provisioningPublisher.publishProvisioningJob(savedEvent.getId());
+
+        auditService.log(command.customerId(), "EVENT_CREATED", "EVENT", savedEvent.getId(), null);
 
         return savedEvent;
     }

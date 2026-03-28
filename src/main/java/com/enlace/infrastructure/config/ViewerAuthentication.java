@@ -35,4 +35,8 @@ public class ViewerAuthentication extends AbstractAuthenticationToken {
     public UUID getEventId() {
         return session.getEvent().getId();
     }
+
+    public UUID getSessionId() {
+        return session.getId();
+    }
 }

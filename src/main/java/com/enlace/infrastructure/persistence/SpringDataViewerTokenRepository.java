@@ -1,5 +1,7 @@
 package com.enlace.infrastructure.persistence;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
@@ -8,6 +10,7 @@ import java.util.UUID;
 public interface SpringDataViewerTokenRepository extends JpaRepository<ViewerTokenEntity, UUID> {
     Optional<ViewerTokenEntity> findByToken(String token);
     List<ViewerTokenEntity> findByEventId(UUID eventId);
+    Page<ViewerTokenEntity> findByEventId(UUID eventId, Pageable pageable);
     void deleteByEventId(UUID eventId);
 
     @org.springframework.data.jpa.repository.Query("SELECT vt FROM ViewerTokenEntity vt JOIN EventEntity e ON vt.eventId = e.id WHERE e.slug = :slug AND vt.code = :code")

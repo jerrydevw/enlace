@@ -41,6 +41,18 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.GONE, "EVENT_ENDED", ex.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
+        log.warn("Acesso proibido: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage());
+    }
+
+    @ExceptionHandler(PlanLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleUnprocessable(PlanLimitExceededException ex) {
+        log.warn("Limite de plano excedido: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, "PLAN_LIMIT_EXCEEDED", ex.getMessage());
+    }
+
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleTooManyRequests(RateLimitExceededException ex) {
         log.warn("Rate limit excedido: {}", ex.getMessage());

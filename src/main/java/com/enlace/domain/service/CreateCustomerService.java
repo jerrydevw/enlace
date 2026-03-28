@@ -26,7 +26,9 @@ public class CreateCustomerService implements CreateCustomerUseCase {
             command.name(),
             command.email(),
             command.plan(),
-            Instant.now()
+            "CHANGE_ME",
+            Instant.now(),
+            null
         );
         return customerRepository.save(customer);
     }

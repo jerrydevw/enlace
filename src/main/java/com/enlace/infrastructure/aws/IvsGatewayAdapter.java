@@ -3,6 +3,8 @@ package com.enlace.infrastructure.aws;
 import com.enlace.domain.port.out.IvsGateway;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -10,13 +12,15 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.ivs.IvsClient;
 import software.amazon.awssdk.services.ivs.model.*;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -24,6 +28,7 @@ public class IvsGatewayAdapter implements IvsGateway {
 
     private final IvsClient ivsClient;
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final ObjectMapper objectMapper;
 
     @Value("${aws.ivs.recording-role-arn}")
@@ -35,13 +40,16 @@ public class IvsGatewayAdapter implements IvsGateway {
     @Value("${aws.ivs.recording-configuration-arn:}")
     private String recordingConfigurationArn;
 
-    public IvsGatewayAdapter(IvsClient ivsClient, S3Client s3Client, ObjectMapper objectMapper) {
+    public IvsGatewayAdapter(IvsClient ivsClient, S3Client s3Client, S3Presigner s3Presigner, ObjectMapper objectMapper) {
         this.ivsClient = ivsClient;
         this.s3Client = s3Client;
+        this.s3Presigner = s3Presigner;
         this.objectMapper = objectMapper;
     }
 
     @Override
+    @CircuitBreaker(name = "ivs")
+    @Retry(name = "ivs")
     public IvsChannelResult createChannel(String eventSlug) {
         log.info("Chamando AWS IVS para criar canal: {}", eventSlug);
         CreateChannelRequest request = CreateChannelRequest.builder()
@@ -134,4 +142,34 @@ public class IvsGatewayAdapter implements IvsGateway {
         }
     }
 
+    @Override
+    public List<S3ObjectInfo> listObjects(String prefix) {
+        log.info("Listando objetos no S3 para o prefixo: {}", prefix);
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(recordingBucket)
+                .prefix(prefix)
+                .build();
+
+        ListObjectsV2Response response = s3Client.listObjectsV2(request);
+        
+        return response.contents().stream()
+                .map(obj -> new S3ObjectInfo(obj.key(), obj.size(), obj.lastModified()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public String generatePresignedUrl(String key, long expirationMinutes) {
+        log.info("Gerando URL pré-assinada para: {} (exp: {} min)", key, expirationMinutes);
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(recordingBucket)
+                .key(key)
+                .build();
+
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(expirationMinutes))
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        return s3Presigner.presignGetObject(presignRequest).url().toString();
+    }
 }

@@ -21,4 +21,14 @@ public interface IvsGateway {
         long durationMs,
         List<String> availableQualities
     ) {}
+
+    record S3ObjectInfo(
+        String key,
+        long sizeBytes,
+        java.time.Instant lastModified
+    ) {}
+
+    List<S3ObjectInfo> listObjects(String prefix);
+
+    String generatePresignedUrl(String key, long expirationMinutes);
 }

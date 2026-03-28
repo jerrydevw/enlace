@@ -51,10 +51,29 @@ app:
   base-url: ${APP_BASE_URL:http://localhost:8080}
   viewer-token-ttl-hours: ${VIEWER_TOKEN_TTL_HOURS:72}
   jwt:
-    secret: ${JWT_SECRET:enlace-super-secret-key-must-be-at-least-32-chars-long}
-    expiration-hours: ${JWT_EXPIRATION_HOURS:4}
+    expiration-hours: ${JWT_EXPIRATION_HOURS:8}
+    refresh-expiration-days: ${JWT_REFRESH_EXPIRATION_DAYS:30}
   rate-limit:
     max-attempts-per-minute: ${RATE_LIMIT_MAX_ATTEMPTS:10}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      ivs:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+  retry:
+    instances:
+      ivs:
+        maxAttempts: 3
+        waitDuration: 1s
+  metrics:
+    enabled: true
+    legacy:
+      enabled: false
+    binders:
+      enabled: true
 api:
   key: ${ENLACE_API_KEY:enlace-dev-key-troque-em-prod}
 

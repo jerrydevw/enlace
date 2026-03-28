@@ -9,6 +9,8 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.ivs.IvsClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 
 import java.net.URI;
 
@@ -34,6 +36,22 @@ public class AwsConfig {
         return S3Client.builder()
                 .region(Region.of(props.getRegion()))
                 .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+    }
+
+    @Bean
+    public S3Presigner s3Presigner(AwsProperties props) {
+        return S3Presigner.builder()
+                .region(Region.of(props.getRegion()))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+    }
+
+    @Bean
+    public SecretsManagerClient secretsManagerClient() {
+        return SecretsManagerClient.builder()
+                .region(Region.US_EAST_1)
+                .credentialsProvider(DefaultCredentialsProvider.create()) // usa a IAM Role do ECS automaticamente
                 .build();
     }
 
