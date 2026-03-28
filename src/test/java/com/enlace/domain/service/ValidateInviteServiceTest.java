@@ -93,7 +93,7 @@ class ValidateInviteServiceTest {
 
         when(eventRepository.findBySlug(slug)).thenReturn(Optional.of(event));
         when(viewerTokenRepository.findByEventSlugAndCode(slug, code)).thenReturn(Optional.of(token));
-        when(jwtService.generateToken(any(), any(), any(), any())).thenReturn("test-jwt");
+        when(jwtService.generateViewerToken(any(), any(), any(), any())).thenReturn("test-jwt");
 
         // When
         validateInviteService.validate(command);

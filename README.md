@@ -241,7 +241,7 @@ sequenceDiagram
     C->>OBS: Configurar RTMPS URL
     OBS->>IVS: Iniciar stream RTMPS
     IVS-->>API: Webhook (stream.started)
-    API->>API: Validar internal-api-key
+    API->>API: Processar webhook
     API->>API: Atualizar status → LIVE
 
     Note over V: Convidados assistem via HLS
@@ -584,7 +584,7 @@ CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp);
 
 | Método | Endpoint | Auth | Descrição |
 |--------|----------|------|-----------|
-| `POST` | `/api/v1/internal/events/stream-status` | X-Internal-Key | Atualizar status da stream (IVS) |
+| `POST` | `/api/v1/internal/events/stream-status` | Não | Atualizar status da stream (IVS) |
 
 ### Health & Monitoring
 
@@ -696,7 +696,6 @@ ValidateInviteService.validate()
 
 ```
 AWS IVS → POST /api/v1/internal/events/stream-status
-   Headers: X-Internal-Key: {secret}
    Body: {
      channelName: "evento-slug",
      eventName: "stream.started" | "stream.ended",
@@ -704,7 +703,6 @@ AWS IVS → POST /api/v1/internal/events/stream-status
    }
    ↓
 InternalController.updateStreamStatus()
-   ├─→ Validar X-Internal-Key
    ↓
 UpdateStreamStatusService.update()
    ├─→ EventRepository.findBySlug()
@@ -827,10 +825,6 @@ JWT_PUBLIC_KEY=<conteúdo do public_key.pem>
 JWT_EXPIRATION_HOURS=8
 JWT_REFRESH_EXPIRATION_DAYS=30
 
-# API Keys
-ENLACE_API_KEY=sua-chave-segura-aqui
-ENLACE_INTERNAL_API_KEY=sua-chave-interna-webhook
-
 # App
 APP_BASE_URL=http://localhost:8080
 VIEWER_TOKEN_TTL_HOURS=72
@@ -914,8 +908,6 @@ java -jar target/app-0.0.1-SNAPSHOT.jar
 | `JWT_PUBLIC_KEY` | (ver application.yml) | Chave pública RSA para validar JWTs |
 | `JWT_EXPIRATION_HOURS` | `8` | Validade do access token (horas) |
 | `JWT_REFRESH_EXPIRATION_DAYS` | `30` | Validade do refresh token (dias) |
-| `ENLACE_API_KEY` | `enlace-dev-key-troque-em-prod` | API key principal |
-| `ENLACE_INTERNAL_API_KEY` | `enlace-internal-dev` | Chave para webhooks internos |
 | `APP_BASE_URL` | `http://localhost:8080` | URL base da aplicação |
 | `VIEWER_TOKEN_TTL_HOURS` | `72` | Validade dos tokens de convite (horas) |
 | `RATE_LIMIT_MAX_ATTEMPTS` | `10` | Máximo de tentativas por minuto |
