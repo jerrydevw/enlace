@@ -57,6 +57,7 @@ public class IvsGatewayAdapter implements IvsGateway {
                 .type(ChannelType.STANDARD)
                 .latencyMode(ChannelLatencyMode.LOW)
                 .recordingConfigurationArn(recordingConfigurationArn)
+                .preset(TranscodePreset.HIGHER_BANDWIDTH_DELIVERY)
                 .build();
 
         CreateChannelResponse response = ivsClient.createChannel(request);
