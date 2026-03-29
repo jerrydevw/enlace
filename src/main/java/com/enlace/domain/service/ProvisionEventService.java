@@ -23,7 +23,7 @@ public class ProvisionEventService implements ProvisionEventUseCase {
     private final StreamCredentialRepository streamCredentialRepository;
     private final IvsGateway ivsGateway;
 
-    @Value("${aws.account-id}")
+    @Value("${aws.account-id:}")
     private String accountId;
 
     public ProvisionEventService(EventRepository eventRepository,
@@ -53,7 +53,11 @@ public class ProvisionEventService implements ProvisionEventUseCase {
                 log.info("Canal IVS criado: ARN={}, Endpoint={}", result.channelArn(), result.ingestEndpoint());
 
                 String channelId = result.channelArn().substring(result.channelArn().lastIndexOf('/') + 1);
-                String s3Prefix = "ivs/v1/" + accountId + "/" + channelId;
+                
+                String accountIdToUse = (accountId == null || accountId.isBlank()) ? "" : accountId;
+                String s3Prefix = "ivs/v1/" + accountIdToUse + "/" + channelId;
+                // Remove barras duplas se o accountId estiver vazio
+                s3Prefix = s3Prefix.replace("//", "/");
 
                 event.markReady(result.channelArn(), result.ingestEndpoint(), result.playbackUrl(), s3Prefix);
                 eventRepository.save(event);

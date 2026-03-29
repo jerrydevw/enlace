@@ -79,6 +79,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleFallback(Exception ex) {
+        if (ex.getClass().getName().equals("software.amazon.awssdk.services.s3.model.NoSuchBucketException")) {
+            log.error("Bucket S3 não encontrado: {}", ex.getMessage());
+            return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "S3_BUCKET_NOT_FOUND", "Configured S3 bucket does not exist");
+        }
         log.error("Erro inesperado capturado: {}", ex.getMessage(), ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR", "An unexpected error occurred");
     }

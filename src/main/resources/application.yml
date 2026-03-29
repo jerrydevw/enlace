@@ -33,22 +33,24 @@ spring:
         secret-key: ${AWS_SECRET_ACCESS_KEY:}
       region:
         static: ${AWS_REGION:}
+      sqs:
+        endpoint: ${AWS_SQS_ENDPOINT:}
 
 aws:
-  secrets:
-    jwt-private-key-arn: arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/private-key-EGC081
-    jwt-public-key-arn: arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/public-key-RaVk4C
-    jwt-secret-arn: arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/secret-ldIMkg
-  account-id: ${AWS_ACCOUNT_ID:}
   region: ${AWS_REGION:}
   access-key: ${AWS_ACCESS_KEY_ID:}
   secret-key: ${AWS_SECRET_ACCESS_KEY:}
+  account-id: ${AWS_ACCOUNT_ID:}
+  secrets:
+    jwt-private-key-arn: ${JWT_PRIVATE_KEY_ARN:arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/private-key-EGC081}
+    jwt-public-key-arn: ${JWT_PUBLIC_KEY_ARN:arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/public-key-RaVk4C}
+    jwt-secret-arn: ${JWT_SECRET_ARN:arn:aws:secretsmanager:us-east-1:983004128117:secret:enlace/jwt/secret-ldIMkg}
   ivs:
     recording-bucket: ${IVS_RECORDING_BUCKET:}
     recording-role-arn: ${IVS_RECORDING_ROLE_ARN:}
     recording-configuration-arn: ${IVS_RECORDING_CONFIGURATION_ARN:}
-
   sqs:
+    region: ${AWS_SQS_REGION:${AWS_REGION:}}
     provisioning-queue-url: ${SQS_PROVISIONING_QUEUE_URL:}
     ivs-events-queue-url: ${SQS_IVS_EVENTS_QUEUE_URL:}
 

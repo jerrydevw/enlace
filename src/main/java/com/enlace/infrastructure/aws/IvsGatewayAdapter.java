@@ -153,17 +153,25 @@ public class IvsGatewayAdapter implements IvsGateway {
 
     @Override
     public List<S3ObjectInfo> listObjects(String prefix) {
-        log.info("Listando objetos no S3 para o prefixo: {}", prefix);
+        log.info("Listando objetos no S3 para o bucket: {} e prefixo: {}", recordingBucket, prefix);
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(recordingBucket)
                 .prefix(prefix)
                 .build();
 
-        ListObjectsV2Response response = s3Client.listObjectsV2(request);
-        
-        return response.contents().stream()
-                .map(obj -> new S3ObjectInfo(obj.key(), obj.size(), obj.lastModified()))
-                .collect(Collectors.toList());
+        try {
+            ListObjectsV2Response response = s3Client.listObjectsV2(request);
+            
+            return response.contents().stream()
+                    .map(obj -> new S3ObjectInfo(obj.key(), obj.size(), obj.lastModified()))
+                    .collect(Collectors.toList());
+        } catch (NoSuchBucketException e) {
+            log.error("Bucket {} não encontrado: {}", recordingBucket, e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Erro ao listar objetos no S3: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
