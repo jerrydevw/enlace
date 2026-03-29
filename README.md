@@ -37,6 +37,7 @@
 - 📺 **Gestão de Eventos** - CRUD completo com provisionamento automático de canais de streaming
 - 🎫 **Sistema de Convites** - Geração de códigos únicos de 6 dígitos para acesso controlado
 - 📹 **Streaming ao Vivo** - Integração completa com Amazon IVS (Interactive Video Service)
+- 📡 **Eventos Assíncronos** - Processamento de status de stream (Start/End) via SQS (Lambda → SQS → API)
 - 👥 **Monitoramento de Viewers** - Rastreamento em tempo real de convidados assistindo
 - 💾 **Gravações** - Gestão e download de gravações armazenadas no S3
 - 📊 **Planos e Limites** - Sistema de planos BASIC e PRO com limites configuráveis
@@ -71,10 +72,10 @@ CREATED → PROVISIONING → READY → LIVE → ENDED
 
 **Estados:**
 - **CREATED**: Evento criado, aguardando provisionamento do canal IVS
-- **PROVISIONING**: Criando canal Amazon IVS (assíncrono via SQS)
+- **PROVISIONING**: Criando canal Amazon IVS (assíncrono via SQS - Fila de Provisionamento)
 - **READY**: Canal IVS criado, credenciais RTMP disponíveis
-- **LIVE**: Transmissão em andamento (detectado via webhook IVS)
-- **ENDED**: Transmissão finalizada
+- **LIVE**: Transmissão em andamento (detectado via Lambda → SQS - Fila de Eventos IVS)
+- **ENDED**: Transmissão finalizada (detectado via Lambda → SQS - Fila de Eventos IVS)
 - **PROVISIONING_FAILED**: Falha ao criar canal (pode retentar)
 
 **Transições Permitidas:**
@@ -230,6 +231,8 @@ sequenceDiagram
     participant API as Enlace API
     participant OBS as OBS/StreamYard
     participant IVS as AWS IVS
+    participant EB as EventBridge
+    participant SQS as AWS SQS
     participant V as Viewers
 
     C->>API: GET /events/{id}/ingestion-url (JWT)
@@ -240,14 +243,17 @@ sequenceDiagram
 
     C->>OBS: Configurar RTMPS URL
     OBS->>IVS: Iniciar stream RTMPS
-    IVS-->>API: Webhook (stream.started)
-    API->>API: Processar webhook
+    IVS->>EB: Stream Started Event
+    EB->>SQS: Send Message (via Lambda)
+    SQS->>API: onIvsEvent (SqsListener)
     API->>API: Atualizar status → LIVE
 
     Note over V: Convidados assistem via HLS
 
     OBS->>IVS: Parar stream
-    IVS-->>API: Webhook (stream.ended)
+    IVS->>EB: Stream Ended Event
+    EB->>SQS: Send Message (via Lambda)
+    SQS->>API: onIvsEvent (SqsListener)
     API->>API: Atualizar status → ENDED
     IVS->>IVS: Salvar gravação no S3
 ```
@@ -297,6 +303,7 @@ src/main/java/com/enlace/
 │   │   ├── in/                      # Portas de entrada (use cases)
 │   │   │   ├── AuthenticateCustomerUseCase.java
 │   │   │   ├── CreateEventUseCase.java
+│   │   │   ├── HandleIvsStreamStatusUseCase.java
 │   │   │   ├── ValidateInviteCodeUseCase.java
 │   │   │   └── ...
 │   │   │
@@ -309,6 +316,7 @@ src/main/java/com/enlace/
 │   ├── service/                     # Implementação dos use cases
 │   │   ├── AuthenticateCustomerService.java
 │   │   ├── CreateEventService.java
+│   │   ├── HandleIvsStreamStatusService.java
 │   │   ├── PlanLimitsService.java
 │   │   ├── EventOwnershipValidator.java
 │   │   └── ...
@@ -344,11 +352,14 @@ src/main/java/com/enlace/
 │   │   └── ...
 │   │
 │   ├── aws/                         # Adaptadores AWS
-│   │   ├── IvsGatewayAdapter.java
-│   │   ├── SqsConsumer.java
-│   │   └── AwsConfig.java
-│   │
-│   └── config/                      # Configurações
+│   │   │   ├── IvsGatewayAdapter.java
+│   │   │   ├── SqsProvisioningPublisher.java
+│   │   │   └── AwsConfig.java
+│   │   │
+│   │   ├── messaging/               # Adaptadores de Mensageria (Consumidores)
+│   │   │   └── IvsEventsListener.java
+│   │   │
+│   │   └── config/                      # Configurações
 │       ├── SecurityConfig.java
 │       ├── CustomerJwtService.java
 │       ├── OpenApiConfig.java
@@ -386,6 +397,8 @@ src/main/java/com/enlace/
 │                                         └──────────────┘     │
 │                                         ┌──────────────┐     │
 │                                         │   AWS SQS    │     │
+│                                         │ (Provisioning│     │
+│                                         │  & Events)   │     │
 │                                         └──────────────┘     │
 │                                         ┌──────────────┐     │
 │                                         │   AWS S3     │     │
@@ -580,12 +593,6 @@ CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp);
 |--------|----------|------|-----------|
 | `DELETE` | `/api/v1/events/{eventId}/sessions/{sessionId}` | JWT Customer | Revogar sessão de viewer |
 
-### Webhooks Internos
-
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `POST` | `/api/v1/internal/events/stream-status` | Não | Atualizar status da stream (IVS) |
-
 ### Health & Monitoring
 
 | Método | Endpoint | Auth | Descrição |
@@ -640,12 +647,14 @@ CreateEventService.create()
    ├─→ PlanLimitsService.validateEventCreation() [verifica limites]
    ├─→ SlugGenerator.generate() [gera slug único]
    ├─→ EventRepository.save() [status=CREATED]
-   ├─→ SqsPublisher.sendProvisioningMessage()
+   ├─→ SqsProvisioningPublisher.publishProvisioningJob()
    └─→ Response 202 Accepted
    ↓
-AWS SQS (fila assíncrona)
+AWS SQS (fila enlace-provisioning-queue)
    ↓
-SqsConsumer.onMessage() [listener]
+(Processado por Worker Externo ou Lambda que re-injeta na API)
+   ↓
+SqsProvisioningPublisher.onMessage() [listener]
    ↓
 ProvisionEventService.provision()
    ├─→ EventRepository.findById()
@@ -692,26 +701,24 @@ ValidateInviteService.validate()
    └─→ Response: { token, eventSlug, status }
 ```
 
-### 4. Atualização de Status via Webhook IVS
+### 4. Atualização de Status via Eventos IVS (Assíncrono)
 
 ```
-AWS IVS → POST /api/v1/internal/events/stream-status
-   Body: {
-     channelName: "evento-slug",
-     eventName: "stream.started" | "stream.ended",
-     streamId: "st-xxx"
-   }
+AWS IVS → EventBridge → Lambda → AWS SQS (enlace-ivs-events)
    ↓
-InternalController.updateStreamStatus()
+IvsEventsListener.onIvsEvent() [SqsListener]
+   ↓
+HandleIvsStreamStatusService.handle()
    ↓
 UpdateStreamStatusService.update()
    ├─→ EventRepository.findBySlug()
-   ├─→ Se eventName == "stream.started":
+   ├─→ Se eventName == "Stream Start":
    │    ├─→ Event.markLive() [status=LIVE]
    │    └─→ EventRepository.save()
-   └─→ Se eventName == "stream.ended":
+   └─→ Se eventName == "Stream End":
         ├─→ Event.markEnded() [status=ENDED]
-        └─→ EventRepository.save()
+        ├─→ EventRepository.save()
+        └─→ IvsGateway.findRecording() [busca metadados da gravação]
 ```
 
 ### 5. Monitoramento de Viewers
@@ -904,6 +911,7 @@ java -jar target/app-0.0.1-SNAPSHOT.jar
 | `IVS_RECORDING_ROLE_ARN` | - | ARN da role IAM para IVS |
 | `IVS_RECORDING_CONFIGURATION_ARN` | - | ARN da configuração de gravação |
 | `SQS_PROVISIONING_QUEUE_URL` | - | URL da fila SQS de provisionamento |
+| `SQS_IVS_EVENTS_QUEUE_URL` | - | URL da fila SQS de eventos IVS (Stream Status) |
 | `JWT_PRIVATE_KEY` | (ver application.yml) | Chave privada RSA para assinar JWTs |
 | `JWT_PUBLIC_KEY` | (ver application.yml) | Chave pública RSA para validar JWTs |
 | `JWT_EXPIRATION_HOURS` | `8` | Validade do access token (horas) |
@@ -911,7 +919,7 @@ java -jar target/app-0.0.1-SNAPSHOT.jar
 | `APP_BASE_URL` | `http://localhost:8080` | URL base da aplicação |
 | `VIEWER_TOKEN_TTL_HOURS` | `72` | Validade dos tokens de convite (horas) |
 | `RATE_LIMIT_MAX_ATTEMPTS` | `10` | Máximo de tentativas por minuto |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Origens permitidas (separar por vírgula) |
+| `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Origens permitidas (separar por vírgula) |
 
 ---
 
