@@ -47,9 +47,9 @@ public class UpdateStreamStatusService implements UpdateStreamStatusUseCase {
                 event.markEnded();
                 eventRepository.save(event);
 
-                if (streamId != null && event.getRecordingS3Prefix() != null) {
+                if (streamId != null && event.getIvsChannelArn() != null) {
                     log.info("Buscando gravação para o evento '{}' (streamId: {})", channelName, streamId);
-                    ivsGateway.findRecording(event.getRecordingS3Prefix(), streamId).ifPresentOrElse(
+                    ivsGateway.findRecording(event.getIvsChannelArn(), streamId).ifPresentOrElse(
                         recording -> log.info("Gravação encontrada: {}", recording.masterPlaylistKey()),
                         () -> log.warn("Gravação ainda não disponível para o streamId: {}", streamId)
                     );
