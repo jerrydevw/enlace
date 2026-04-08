@@ -17,9 +17,6 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -117,59 +114,16 @@ public class IvsGatewayAdapter implements IvsGateway {
     }
 
     @Override
-    public Optional<RecordingResult> findRecording(String channelArn, String streamId) {
-        // Busca a sessão de stream para obter o horário de início e derivar o caminho S3 correto.
-        // O IVS organiza gravações por data/hora: ivs/v1/{accountId}/{channelId}/{ano}/{mes}/{dia}/{hora}/{min}/{recordingId}
-        // O streamId (ex: st-xxx) NÃO é usado como pasta — é necessário derivar o prefixo de data via GetStreamSession.
-        GetStreamSessionResponse sessionResponse;
-        try {
-            sessionResponse = ivsClient.getStreamSession(
-                    GetStreamSessionRequest.builder()
-                            .channelArn(channelArn)
-                            .streamId(streamId)
-                            .build()
-            );
-        } catch (ResourceNotFoundException e) {
-            log.warn("Stream session não encontrada: channelArn={}, streamId={}", channelArn, streamId);
-            return Optional.empty();
-        }
-
-        Instant startTime = sessionResponse.streamSession().startTime();
-
-        // Deriva o prefixo base S3 a partir do ARN: arn:aws:ivs:{region}:{accountId}:channel/{channelId}
-        String[] arnParts = channelArn.split(":");
-        String accountId = arnParts[4];
-        String channelId = arnParts[5].replace("channel/", "");
-        String s3Prefix = "ivs/v1/" + accountId + "/" + channelId;
-
-        // Monta o prefixo de data com base no horário de início da stream (UTC)
-        ZonedDateTime startUtc = startTime.atZone(ZoneOffset.UTC);
-        String datePrefix = String.format("%s/%d/%d/%d/%d/%d/",
-                s3Prefix,
-                startUtc.getYear(),
-                startUtc.getMonthValue(),
-                startUtc.getDayOfMonth(),
-                startUtc.getHour(),
-                startUtc.getMinute()
-        );
-
-        // Localiza o arquivo recording-ended.json dentro da pasta de data correta
-        List<S3ObjectInfo> objects = listObjects(datePrefix);
-        Optional<String> recordingJsonKey = objects.stream()
-                .filter(obj -> obj.key().endsWith("/events/recording-ended.json"))
-                .map(S3ObjectInfo::key)
-                .findFirst();
-
-        if (recordingJsonKey.isEmpty()) {
-            log.warn("Recording ainda não disponível para streamId={} (prefixo buscado: {})", streamId, datePrefix);
-            return Optional.empty();
-        }
+    public Optional<RecordingResult> findRecording(String recordingS3KeyPrefix) {
+        // O evento "Recording End" do EventBridge já traz o prefixo exato da gravação no S3.
+        // Formato: ivs/v1/{accountId}/{channelId}/{ano}/{mes}/{dia}/{hora}/{min}/{recordingId}
+        String key = recordingS3KeyPrefix + "/events/recording-ended.json";
 
         try {
             ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(
                     GetObjectRequest.builder()
                             .bucket(recordingBucket)
-                            .key(recordingJsonKey.get())
+                            .key(key)
                             .build()
             );
 
@@ -182,17 +136,15 @@ public class IvsGatewayAdapter implements IvsGateway {
                     qualities.add(r.path("path").asText())
             );
 
-            // O masterKey é derivado do caminho real do recording-ended.json, não do streamId
-            String recordingBasePath = recordingJsonKey.get().replace("/events/recording-ended.json", "");
-            String masterKey = recordingBasePath + "/media/hls/" + playlist;
+            String masterKey = recordingS3KeyPrefix + "/media/hls/" + playlist;
 
             return Optional.of(new RecordingResult(masterKey, durationMs, qualities));
 
         } catch (NoSuchKeyException e) {
-            log.warn("recording-ended.json não encontrado no S3: {}", recordingJsonKey.get());
+            log.warn("recording-ended.json não encontrado no S3: {}", key);
             return Optional.empty();
         } catch (Exception e) {
-            log.error("Erro ao buscar gravação para streamId={}: {}", streamId, e.getMessage(), e);
+            log.error("Erro ao buscar gravação (prefixo={}): {}", recordingS3KeyPrefix, e.getMessage(), e);
             return Optional.empty();
         }
     }
