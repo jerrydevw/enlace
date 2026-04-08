@@ -114,11 +114,10 @@ public class IvsGatewayAdapter implements IvsGateway {
     }
 
     @Override
-    public Optional<RecordingResult> findRecording(String s3Prefix, String streamId) {
-        // O IVS organiza por data/hora, então busca por prefixo + streamId
-        // s3Prefix = ivs/v1/{accountId}/{channelId}
-        // streamId vem do evento Stream End do EventBridge
-        String key = s3Prefix + "/" + streamId + "/events/recording-ended.json";
+    public Optional<RecordingResult> findRecording(String recordingS3KeyPrefix) {
+        // O evento "Recording End" do EventBridge já traz o prefixo exato da gravação no S3.
+        // Formato: ivs/v1/{accountId}/{channelId}/{ano}/{mes}/{dia}/{hora}/{min}/{recordingId}
+        String key = recordingS3KeyPrefix + "/events/recording-ended.json";
 
         try {
             ResponseBytes<GetObjectResponse> response = s3Client.getObjectAsBytes(
@@ -128,7 +127,6 @@ public class IvsGatewayAdapter implements IvsGateway {
                             .build()
             );
 
-            // Parse do JSON
             JsonNode root = objectMapper.readTree(response.asUtf8String());
             String playlist = root.path("media").path("hls").path("playlist").asText();
             long durationMs = root.path("media").path("hls").path("duration_ms").asLong();
@@ -138,15 +136,15 @@ public class IvsGatewayAdapter implements IvsGateway {
                     qualities.add(r.path("path").asText())
             );
 
-            String masterKey = s3Prefix + "/" + streamId + "/media/hls/" + playlist;
+            String masterKey = recordingS3KeyPrefix + "/media/hls/" + playlist;
 
             return Optional.of(new RecordingResult(masterKey, durationMs, qualities));
 
         } catch (NoSuchKeyException e) {
-            log.warn("Recording ainda não disponível para stream {}: {}", streamId, key);
+            log.warn("recording-ended.json não encontrado no S3: {}", key);
             return Optional.empty();
         } catch (Exception e) {
-            log.error("Erro ao buscar gravação no S3 para stream {}: {}", streamId, e.getMessage(), e);
+            log.error("Erro ao buscar gravação (prefixo={}): {}", recordingS3KeyPrefix, e.getMessage(), e);
             return Optional.empty();
         }
     }

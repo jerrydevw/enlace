@@ -18,6 +18,6 @@ public class HandleIvsStreamStatusService implements HandleIvsStreamStatusUseCas
     @Override
     @Transactional
     public void handle(IvsStreamStatusMessage message) {
-        updateStreamStatusUseCase.update(message.channelName(), message.eventName(), message.streamId());
+        updateStreamStatusUseCase.update(message.channelName(), message.eventName(), message.streamId(), message.recordingS3KeyPrefix());
     }
 }

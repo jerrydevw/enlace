@@ -6,7 +6,7 @@ import java.util.List;
 public interface IvsGateway {
     IvsChannelResult createChannel(String eventSlug);
     void deleteChannel(String channelArn, String streamKeyArn);
-    Optional<RecordingResult> findRecording(String s3Prefix, String streamId);
+    Optional<RecordingResult> findRecording(String recordingS3KeyPrefix);
 
     record IvsChannelResult(
         String channelArn,

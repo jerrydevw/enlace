@@ -25,7 +25,7 @@ public class UpdateStreamStatusService implements UpdateStreamStatusUseCase {
 
     @Override
     @Transactional
-    public void update(String channelName, String eventName, String streamId) {
+    public void update(String channelName, String eventName, String streamId, String recordingS3KeyPrefix) {
         // channelName = slug do evento (usado como nome do canal IVS)
         Optional<Event> eventOpt = eventRepository.findBySlug(channelName);
 
@@ -46,14 +46,19 @@ public class UpdateStreamStatusService implements UpdateStreamStatusUseCase {
                 log.info("Marcando evento '{}' como ENDED — streamId: {}", channelName, streamId);
                 event.markEnded();
                 eventRepository.save(event);
-
-                if (streamId != null && event.getRecordingS3Prefix() != null) {
-                    log.info("Buscando gravação para o evento '{}' (streamId: {})", channelName, streamId);
-                    ivsGateway.findRecording(event.getRecordingS3Prefix(), streamId).ifPresentOrElse(
-                        recording -> log.info("Gravação encontrada: {}", recording.masterPlaylistKey()),
-                        () -> log.warn("Gravação ainda não disponível para o streamId: {}", streamId)
-                    );
+                // A gravacao so estara disponivel no S3 apos o IVS processar o arquivo.
+                // O evento "Recording End" do EventBridge dispara exatamente quando isso ocorre.
+            }
+            case "Recording End" -> {
+                if (recordingS3KeyPrefix == null) {
+                    log.warn("Recording End recebido sem recordingS3KeyPrefix para channel '{}' — ignorando", channelName);
+                    return;
                 }
+                log.info("Gravacao disponivel para o evento '{}' (prefixo: {})", channelName, recordingS3KeyPrefix);
+                ivsGateway.findRecording(recordingS3KeyPrefix).ifPresentOrElse(
+                    recording -> log.info("Gravacao processada: masterKey={} duration={}ms", recording.masterPlaylistKey(), recording.durationMs()),
+                    () -> log.warn("recording-ended.json nao encontrado para prefixo: {}", recordingS3KeyPrefix)
+                );
             }
             default -> log.warn("eventName '{}' nao reconhecido — ignorando", eventName);
         }
