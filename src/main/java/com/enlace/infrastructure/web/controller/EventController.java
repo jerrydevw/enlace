@@ -7,6 +7,7 @@ import com.enlace.domain.port.in.CreateEventUseCase;
 import com.enlace.domain.port.in.DeleteEventUseCase;
 import com.enlace.domain.port.in.GetCredentialsUseCase;
 import com.enlace.domain.port.in.GetEventUseCase;
+import com.enlace.domain.port.in.UpdateCoupleStoryUseCase;
 import com.enlace.domain.port.in.UpdateEventUseCase;
 import com.enlace.domain.port.in.ViewerHeartbeatUseCase;
 import com.enlace.domain.service.EventOwnershipValidator;
@@ -45,11 +46,13 @@ public class EventController {
     private final UpdateEventUseCase updateEventUseCase;
     private final EventOwnershipValidator ownershipValidator;
     private final ViewerHeartbeatUseCase heartbeatUseCase;
+    private final UpdateCoupleStoryUseCase updateCoupleStoryUseCase;
 
-    public EventController(CreateEventUseCase createEventUseCase, GetEventUseCase getEventUseCase, 
+    public EventController(CreateEventUseCase createEventUseCase, GetEventUseCase getEventUseCase,
                            DeleteEventUseCase deleteEventUseCase, GetCredentialsUseCase getCredentialsUseCase,
                            UpdateEventUseCase updateEventUseCase, EventOwnershipValidator ownershipValidator,
-                           ViewerHeartbeatUseCase heartbeatUseCase) {
+                           ViewerHeartbeatUseCase heartbeatUseCase,
+                           UpdateCoupleStoryUseCase updateCoupleStoryUseCase) {
         this.createEventUseCase = createEventUseCase;
         this.getEventUseCase = getEventUseCase;
         this.deleteEventUseCase = deleteEventUseCase;
@@ -57,6 +60,7 @@ public class EventController {
         this.updateEventUseCase = updateEventUseCase;
         this.ownershipValidator = ownershipValidator;
         this.heartbeatUseCase = heartbeatUseCase;
+        this.updateCoupleStoryUseCase = updateCoupleStoryUseCase;
     }
 
     @PostMapping
@@ -177,13 +181,32 @@ public class EventController {
         return ResponseEntity.ok(new IngestionUrlResponse(ingestionUrl));
     }
 
+    @PatchMapping("/{id}/couple-story")
+    @Operation(summary = "Personalizar sala de espera", description = "Salva os nomes do casal e a mensagem exibida na sala de espera dos convidados.")
+    public ResponseEntity<Void> updateCoupleStory(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateCoupleStoryRequest request) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
+        ownershipValidator.validate(id, customerId);
+        updateCoupleStoryUseCase.update(new UpdateCoupleStoryUseCase.UpdateCoupleStoryCommand(
+            id,
+            customerId,
+            request.partner1Name(),
+            request.partner2Name(),
+            request.message()
+        ));
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{slug}/heartbeat")
-    @Operation(summary = "Registrar heartbeat do viewer", description = "Endpoint para o viewer enviar ping a cada 30s.")
-    public ResponseEntity<Void> heartbeat(@PathVariable String slug) {
+    @Operation(summary = "Registrar heartbeat do viewer", description = "Endpoint para o viewer enviar ping a cada 30s. Requer o header X-Watch-Nonce com o nonce atual. Retorna o novo nonce.")
+    public ResponseEntity<Map<String, String>> heartbeat(
+            @PathVariable String slug,
+            @RequestHeader(value = "X-Watch-Nonce", required = false) String nonce) {
         UUID sessionId = SecurityUtils.getCurrentViewerSessionId();
         UUID eventId = SecurityUtils.getCurrentViewer().getEventId();
-        heartbeatUseCase.registerHeartbeat(sessionId, eventId);
-        return ResponseEntity.ok().build();
+        ViewerHeartbeatUseCase.HeartbeatResult result = heartbeatUseCase.registerHeartbeat(sessionId, eventId, nonce);
+        return ResponseEntity.ok(Map.of("watchNonce", result.newNonce()));
     }
 
     @GetMapping("/{id}/viewers/count")
@@ -202,6 +225,12 @@ public class EventController {
             "recordingRetentionDays", event.getPlan().getRecordingRetentionDays(),
             "price", event.getPlan().getPricePerEvent()
         );
+        CoupleStoryResponse coupleStoryResponse = event.getCoupleStory() != null
+            ? new CoupleStoryResponse(
+                event.getCoupleStory().getPartner1Name(),
+                event.getCoupleStory().getPartner2Name(),
+                event.getCoupleStory().getMessage())
+            : null;
         return new EventResponse(
                 event.getId(),
                 event.getSlug(),
@@ -213,7 +242,8 @@ public class EventController {
                 liveStarted ? event.getIvsPlaybackUrl() : null,
                 event.isRecordingAvailable(),
                 event.getCreatedAt(),
-                event.getDeletedAt()
+                event.getDeletedAt(),
+                coupleStoryResponse
         );
     }
 }

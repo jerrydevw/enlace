@@ -18,6 +18,7 @@ public interface ValidateInviteCodeUseCase {
         Instant expiresAt,
         String eventTitle,
         EventStatus eventStatus,
-        Instant scheduledAt
+        Instant scheduledAt,
+        String watchNonce
     ) {}
 }

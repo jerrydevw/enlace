@@ -22,6 +22,7 @@ public class ViewerSession {
     private Instant issuedAt;
     private Instant expiresAt;
     private boolean revoked = false;
+    private String activeNonce;
 
     public void revoke() {
         this.revoked = true;

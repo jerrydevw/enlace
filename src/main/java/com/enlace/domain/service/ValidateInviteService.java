@@ -10,6 +10,7 @@ import com.enlace.domain.port.out.EventRepository;
 import com.enlace.domain.port.out.ViewerSessionRepository;
 import com.enlace.domain.port.out.ViewerTokenRepository;
 import com.enlace.infrastructure.config.JwtService;
+import com.enlace.shared.TokenGenerator;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -89,6 +90,7 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
         planLimitsService.validateViewerLimit(event, (int) activeViewers);
 
         String jti = UUID.randomUUID().toString();
+        String watchNonce = TokenGenerator.generate();
         String sessionToken = jwtService.generateViewerToken(token.getId(), event.getId(), event.getSlug(), jti);
         Instant expiresAt = Instant.now().plus(jwtExpirationHours, ChronoUnit.HOURS);
 
@@ -102,6 +104,7 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
         session.setIssuedAt(Instant.now());
         session.setExpiresAt(expiresAt);
         session.setRevoked(false);
+        session.setActiveNonce(watchNonce);
 
         viewerSessionRepository.save(session);
 
@@ -113,7 +116,8 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
                 expiresAt,
                 event.getTitle(),
                 event.getStatus(),
-                event.getScheduledAt()
+                event.getScheduledAt(),
+                watchNonce
         );
     }
 

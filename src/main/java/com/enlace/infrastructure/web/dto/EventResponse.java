@@ -17,5 +17,6 @@ public record EventResponse(
     String ivsPlaybackUrl,
     boolean recordingAvailable,
     Instant createdAt,
-    Instant deletedAt
+    Instant deletedAt,
+    CoupleStoryResponse coupleStory
 ) {}

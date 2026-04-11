@@ -45,6 +45,9 @@ public class ViewerSessionEntity {
     @Column(nullable = false)
     private boolean revoked = false;
 
+    @Column(name = "active_nonce", length = 64)
+    private String activeNonce;
+
     public static ViewerSessionEntity fromDomain(ViewerSession session) {
         ViewerSessionEntity entity = new ViewerSessionEntity();
         entity.id = session.getId();
@@ -56,6 +59,7 @@ public class ViewerSessionEntity {
         entity.issuedAt = session.getIssuedAt();
         entity.expiresAt = session.getExpiresAt();
         entity.revoked = session.isRevoked();
+        entity.activeNonce = session.getActiveNonce();
         return entity;
     }
 
@@ -70,6 +74,7 @@ public class ViewerSessionEntity {
         session.setIssuedAt(issuedAt);
         session.setExpiresAt(expiresAt);
         session.setRevoked(revoked);
+        session.setActiveNonce(activeNonce);
         return session;
     }
 }

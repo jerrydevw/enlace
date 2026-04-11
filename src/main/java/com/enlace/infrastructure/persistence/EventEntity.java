@@ -1,5 +1,6 @@
 package com.enlace.infrastructure.persistence;
  
+import com.enlace.domain.model.CoupleStory;
 import com.enlace.domain.model.Event;
 import com.enlace.domain.model.EventStatus;
 import com.enlace.domain.model.Plan;
@@ -67,6 +68,15 @@ public class EventEntity {
     @SoftDelete(strategy = SoftDeleteType.DELETED, columnName = "deleted_at")
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "partner1_name", length = 100)
+    private String partner1Name;
+
+    @Column(name = "partner2_name", length = 100)
+    private String partner2Name;
+
+    @Column(name = "story_message", length = 400)
+    private String storyMessage;
  
     public static EventEntity fromDomain(Event event) {
         EventEntity entity = new EventEntity();
@@ -85,6 +95,9 @@ public class EventEntity {
         entity.createdAt = event.getCreatedAt();
         entity.updatedAt = event.getUpdatedAt();
         entity.deletedAt = event.getDeletedAt();
+        entity.partner1Name = event.getCoupleStory() != null ? event.getCoupleStory().getPartner1Name() : null;
+        entity.partner2Name = event.getCoupleStory() != null ? event.getCoupleStory().getPartner2Name() : null;
+        entity.storyMessage = event.getCoupleStory() != null ? event.getCoupleStory().getMessage() : null;
         return entity;
     }
  
@@ -105,6 +118,10 @@ public class EventEntity {
         event.setCreatedAt(createdAt);
         event.setUpdatedAt(updatedAt);
         event.setDeletedAt(deletedAt);
+        boolean hasStory = partner1Name != null || partner2Name != null || storyMessage != null;
+        event.setCoupleStory(hasStory
+            ? new CoupleStory(partner1Name, partner2Name, storyMessage)
+            : null);
         return event;
     }
 }

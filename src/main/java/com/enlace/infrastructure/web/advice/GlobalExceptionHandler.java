@@ -1,6 +1,7 @@
 package com.enlace.infrastructure.web.advice;
 
 import com.enlace.domain.exception.*;
+import com.enlace.domain.exception.SessionConflictException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +58,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnprocessable(PlanLimitExceededException ex) {
         log.warn("Limite de plano excedido: {}", ex.getMessage());
         return buildResponse(HttpStatus.UNPROCESSABLE_ENTITY, "PLAN_LIMIT_EXCEEDED", ex.getMessage());
+    }
+
+    @ExceptionHandler(SessionConflictException.class)
+    public ResponseEntity<ErrorResponse> handleSessionConflict(SessionConflictException ex) {
+        log.warn("Conflito de sessão: {}", ex.getMessage());
+        return buildResponse(HttpStatus.CONFLICT, "SESSION_CONFLICT", ex.getMessage());
     }
 
     @ExceptionHandler(RateLimitExceededException.class)

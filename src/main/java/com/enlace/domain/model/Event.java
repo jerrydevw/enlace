@@ -28,6 +28,7 @@ public class Event {
     private Instant createdAt;
     private Instant updatedAt;
     private Instant deletedAt;
+    private CoupleStory coupleStory;   // nullable — null = sem personalização
  
     public Event(UUID id, UUID customerId, String slug, String title, Instant scheduledAt, Plan plan) {
         this.id = id;
