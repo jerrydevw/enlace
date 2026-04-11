@@ -1,5 +1,6 @@
 package com.enlace.infrastructure.aws;
 
+import com.enlace.domain.model.Plan;
 import com.enlace.domain.port.out.IvsGateway;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,7 +38,7 @@ public class IvsGatewayAdapter implements IvsGateway {
     @Value("${aws.ivs.recording-bucket}")
     private String recordingBucket;
 
-    @Value("${aws.ivs.recording-configuration-arn:}")
+    @Value("${aws.ivs.recording-configuration-arn}")
     private String recordingConfigurationArn;
 
     public IvsGatewayAdapter(IvsClient ivsClient, S3Client s3Client, S3Presigner s3Presigner, ObjectMapper objectMapper) {
@@ -50,12 +51,16 @@ public class IvsGatewayAdapter implements IvsGateway {
     @Override
     @CircuitBreaker(name = "ivs")
     @Retry(name = "ivs")
-    public IvsChannelResult createChannel(String eventSlug) {
-        log.info("Chamando AWS IVS para criar canal: {}", eventSlug);
+    public IvsChannelResult createChannel(String eventSlug, com.enlace.domain.model.Plan plan) {
+        ChannelLatencyMode latencyMode = plan == Plan.PREMIUM
+                ? ChannelLatencyMode.LOW
+                : ChannelLatencyMode.NORMAL;
+
+        log.info("Chamando AWS IVS para criar canal: {} (plano={} latencia={})", eventSlug, plan, latencyMode);
         CreateChannelRequest request = CreateChannelRequest.builder()
                 .name(eventSlug)
                 .type(ChannelType.STANDARD)
-                .latencyMode(ChannelLatencyMode.LOW)
+                .latencyMode(latencyMode)
                 .recordingConfigurationArn(recordingConfigurationArn)
                 .build();
 
@@ -128,17 +133,23 @@ public class IvsGatewayAdapter implements IvsGateway {
             );
 
             JsonNode root = objectMapper.readTree(response.asUtf8String());
-            String playlist = root.path("media").path("hls").path("playlist").asText();
-            long durationMs = root.path("media").path("hls").path("duration_ms").asLong();
+            JsonNode hls = root.path("media").path("hls");
 
-            List<String> qualities = new ArrayList<>();
-            root.path("media").path("hls").path("renditions").forEach(r ->
-                    qualities.add(r.path("path").asText())
-            );
+            String hlsPath    = hls.path("path").asText();          // "media/hls"
+            String masterFile = hls.path("playlist").asText();       // "master.m3u8"
+            long durationMs   = hls.path("duration_ms").asLong();
 
-            String masterKey = recordingS3KeyPrefix + "/media/hls/" + playlist;
+            String masterKey = recordingS3KeyPrefix + "/" + hlsPath + "/" + masterFile;
 
-            return Optional.of(new RecordingResult(masterKey, durationMs, qualities));
+            List<IvsGateway.RenditionInfo> renditions = new ArrayList<>();
+            hls.path("renditions").forEach(r -> {
+                String quality      = r.path("path").asText();       // "160p30"
+                String playlistFile = r.path("playlist").asText();   // "playlist.m3u8"
+                String s3Key = recordingS3KeyPrefix + "/" + hlsPath + "/" + quality + "/" + playlistFile;
+                renditions.add(new IvsGateway.RenditionInfo(quality, s3Key));
+            });
+
+            return Optional.of(new RecordingResult(masterKey, durationMs, renditions));
 
         } catch (NoSuchKeyException e) {
             log.warn("recording-ended.json não encontrado no S3: {}", key);

@@ -211,6 +211,7 @@ public class EventController {
                 event.getPlan(),
                 planLimits,
                 liveStarted ? event.getIvsPlaybackUrl() : null,
+                event.isRecordingAvailable(),
                 event.getCreatedAt(),
                 event.getDeletedAt()
         );

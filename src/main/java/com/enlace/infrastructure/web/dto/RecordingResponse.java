@@ -4,8 +4,8 @@ import java.time.Instant;
 
 public record RecordingResponse(
     String recordingId,
-    String filename,
-    long sizeBytes,
+    String quality,
+    long durationMs,
     Instant recordedAt,
     String downloadUrl
 ) {}

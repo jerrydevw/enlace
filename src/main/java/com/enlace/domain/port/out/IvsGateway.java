@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.List;
 
 public interface IvsGateway {
-    IvsChannelResult createChannel(String eventSlug);
+    IvsChannelResult createChannel(String eventSlug, com.enlace.domain.model.Plan plan);
     void deleteChannel(String channelArn, String streamKeyArn);
     Optional<RecordingResult> findRecording(String recordingS3KeyPrefix);
 
@@ -16,10 +16,15 @@ public interface IvsGateway {
         String playbackUrl
     ) {}
 
+    record RenditionInfo(
+        String quality,       // ex: "160p30"
+        String s3Key          // chave completa no S3
+    ) {}
+
     record RecordingResult(
         String masterPlaylistKey,
         long durationMs,
-        List<String> availableQualities
+        List<RenditionInfo> renditions
     ) {}
 
     record S3ObjectInfo(

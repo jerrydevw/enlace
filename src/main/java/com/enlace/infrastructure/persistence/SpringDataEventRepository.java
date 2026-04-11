@@ -1,5 +1,6 @@
 package com.enlace.infrastructure.persistence;
 
+import com.enlace.domain.model.EventStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,4 +12,5 @@ public interface SpringDataEventRepository extends JpaRepository<EventEntity, UU
     Optional<EventEntity> findBySlug(String slug);
     List<EventEntity> findByCustomerId(UUID customerId);
     Page<EventEntity> findByCustomerId(UUID customerId, Pageable pageable);
+    Page<EventEntity> findByCustomerIdAndStatus(UUID customerId, Pageable pageable, EventStatus eventStatus);
 }

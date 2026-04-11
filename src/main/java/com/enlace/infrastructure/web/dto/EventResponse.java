@@ -15,6 +15,7 @@ public record EventResponse(
     Plan plan,
     Map<String, Object> planLimits,
     String ivsPlaybackUrl,
+    boolean recordingAvailable,
     Instant createdAt,
     Instant deletedAt
 ) {}

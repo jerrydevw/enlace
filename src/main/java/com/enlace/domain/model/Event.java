@@ -24,6 +24,7 @@ public class Event {
     private String ivsChannelIngestEndpoint;
     private String ivsPlaybackUrl;
     private String recordingS3Prefix;
+    private boolean recordingAvailable;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant deletedAt;
@@ -70,5 +71,10 @@ public class Event {
  
     public void markEnded() {
         transitionTo(EventStatus.ENDED);
+    }
+
+    public void markRecordingAvailable() {
+        this.recordingAvailable = true;
+        this.updatedAt = Instant.now();
     }
 }

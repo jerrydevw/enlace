@@ -1,6 +1,7 @@
 package com.enlace.infrastructure.persistence;
 
 import com.enlace.domain.model.Event;
+import com.enlace.domain.model.EventStatus;
 import com.enlace.domain.port.out.EventRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,8 +52,10 @@ public class JpaEventRepository implements EventRepository {
 
     @Override
     public Page<Event> findByCustomerId(UUID customerId, Pageable pageable) {
-        return springDataEventRepository.findByCustomerId(customerId, pageable)
+        return springDataEventRepository.findByCustomerIdAndStatus(customerId, pageable, EventStatus.READY)
                 .map(EventEntity::toDomain);
+//        return springDataEventRepository.findByCustomerId(customerId, pageable)
+//                .map(EventEntity::toDomain);
     }
 
     @Override

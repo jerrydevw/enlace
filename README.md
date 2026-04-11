@@ -453,22 +453,24 @@ src/main/java/com/enlace/
 ### Diagrama ER
 
 ```
-┌──────────────┐         ┌──────────────────┐
-│  customers   │         │      events      │
-├──────────────┤         ├──────────────────┤
-│ id (PK)      │────1:N──│ id (PK)          │
-│ name         │         │ customer_id (FK) │
-│ email (UQ)   │         │ slug (UQ)        │
-│ password     │         │ title            │
-│ plan         │         │ scheduled_at     │
-│ created_at   │         │ status           │
-│ deleted_at   │         │ ivs_channel_arn  │
-└──────────────┘         │ ivs_playback_url │
-                         │ recording_s3_prefix│
-                         │ created_at       │
-                         │ updated_at       │
-                         │ deleted_at       │
-                         └─────────┬────────┘
+┌──────────────┐         ┌──────────────────────┐
+│  customers   │         │        events        │
+├──────────────┤         ├──────────────────────┤
+│ id (PK)      │────1:N──│ id (PK)              │
+│ name         │         │ customer_id (FK)      │
+│ email (UQ)   │         │ slug (UQ)             │
+│ password     │         │ title                 │
+│ created_at   │         │ scheduled_at          │
+│ deleted_at   │         │ plan                  │
+└──────────────┘         │ status                │
+                         │ ivs_channel_arn       │
+                         │ ivs_playback_url      │
+                         │ recording_s3_prefix   │
+                         │ recording_available   │
+                         │ created_at            │
+                         │ updated_at            │
+                         │ deleted_at            │
+                         └─────────┬─────────────┘
                                    │
                           ┌────────┴────────┐
                           │                 │
@@ -550,48 +552,114 @@ CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp);
 | `POST` | `/api/v1/auth/login` | Não | Login e obter tokens |
 | `POST` | `/api/v1/auth/refresh` | Não | Renovar access token |
 
+### Autenticação
+
+| Método | Endpoint | Auth | Request Body | Response | Status |
+|--------|----------|------|-------------|----------|--------|
+| `POST` | `/api/v1/auth/register` | Não | `{ name, email, password (min 6) }` | `CustomerResponse` | 201 |
+| `POST` | `/api/v1/auth/login` | Não | `{ email, password }` | `{ accessToken, refreshToken, customer }` | 200 |
+| `POST` | `/api/v1/auth/refresh` | Não | `{ refreshToken }` | `{ accessToken, refreshToken }` | 200 |
+
+### Customers
+
+| Método | Endpoint | Auth | Request Body | Response | Status |
+|--------|----------|------|-------------|----------|--------|
+| `POST` | `/api/v1/customers` | Não | `{ name, email }` | `CustomerResponse` | 201 |
+
+> **Nota:** `/api/v1/auth/register` é o endpoint principal de cadastro (inclui senha). `/api/v1/customers` cria um customer sem senha (uso interno).
+
+### Planos
+
+| Método | Endpoint | Auth | Response | Status |
+|--------|----------|------|----------|--------|
+| `GET` | `/api/v1/plans` | Não | Lista de planos com limites e preços | 200 |
+
 ### Gestão de Eventos (Customer)
 
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `POST` | `/api/v1/events` | JWT Customer | Criar novo evento |
-| `GET` | `/api/v1/events?page=0&size=20` | JWT Customer | Listar eventos (paginado) |
-| `GET` | `/api/v1/events/{id}` | JWT Customer | Obter detalhes do evento |
-| `PUT` | `/api/v1/events/{id}` | JWT Customer | Atualizar evento |
-| `DELETE` | `/api/v1/events/{id}` | JWT Customer | Deletar evento (soft delete) |
-| `GET` | `/api/v1/events/{id}/credentials` | JWT Customer | Obter credenciais RTMP |
-| `GET` | `/api/v1/events/{id}/ingestion-url` | JWT Customer | Obter URL formatada para OBS |
-| `GET` | `/api/v1/events/{id}/viewers/count` | JWT Customer | Contar viewers ativos |
+| Método | Endpoint | Auth | Request Body | Response | Status |
+|--------|----------|------|-------------|----------|--------|
+| `POST` | `/api/v1/events` | JWT Customer | `{ title, scheduledAt, plan }` | `EventResponse` | 202 |
+| `GET` | `/api/v1/events?page=0&size=20` | JWT Customer | — | `Page<EventResponse>` | 200 |
+| `GET` | `/api/v1/events/{id}` | JWT Customer | — | `EventResponse` | 200 |
+| `PUT` | `/api/v1/events/{id}` | JWT Customer | `{ title, scheduledAt }` | `EventResponse` | 200 |
+| `DELETE` | `/api/v1/events/{id}` | JWT Customer | — | — | 204 |
+| `GET` | `/api/v1/events/{id}/credentials` | JWT Customer | — | `{ rtmpEndpoint, streamKey, expiresAt }` | 200 |
+| `GET` | `/api/v1/events/{id}/ingestion-url` | JWT Customer | — | `{ ingestionUrl }` | 200 |
+| `GET` | `/api/v1/events/{id}/viewers/count` | JWT Customer | — | `{ activeViewers }` | 200 |
+
+**EventResponse:**
+```json
+{
+  "id": "UUID",
+  "slug": "string",
+  "title": "string",
+  "scheduledAt": "Instant",
+  "status": "CREATED | PROVISIONING | READY | LIVE | ENDED | PROVISIONING_FAILED",
+  "plan": "BASIC | PRO",
+  "planLimits": { "maxViewers": int, "recordingRetentionDays": int, "price": double },
+  "ivsPlaybackUrl": "string | null (disponível quando LIVE ou ENDED)",
+  "recordingAvailable": "boolean (true após Recording End do IVS)",
+  "createdAt": "Instant",
+  "deletedAt": "Instant | null"
+}
+```
 
 ### Gestão de Convites (Customer)
 
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `POST` | `/api/v1/events/{id}/tokens` | JWT Customer | Gerar novos convites |
-| `GET` | `/api/v1/events/{id}/tokens?page=0` | JWT Customer | Listar convites (paginado) |
-| `DELETE` | `/api/v1/events/{id}/tokens/{tokenId}` | JWT Customer | Revogar convite |
+| Método | Endpoint | Auth | Request Body | Response | Status |
+|--------|----------|------|-------------|----------|--------|
+| `POST` | `/api/v1/events/{id}/tokens` | JWT Customer | `[{ label, count }]` | `List<ViewerTokenResponse>` | 201 |
+| `GET` | `/api/v1/events/{id}/tokens?page=0&size=50` | JWT Customer | — | `Page<ViewerTokenResponse>` | 200 |
+| `DELETE` | `/api/v1/events/{id}/tokens/{tokenId}` | JWT Customer | — | — | 204 |
+
+**ViewerTokenResponse:**
+```json
+{
+  "id": "UUID",
+  "label": "string | null",
+  "code": "string (6 chars alfanumérico)",
+  "guestName": "string | null",
+  "deliveryStatus": "NOT_SENT | PENDING | SENT | FAILED",
+  "revoked": "boolean",
+  "expiresAt": "Instant",
+  "deletedAt": "Instant | null"
+}
+```
 
 ### Acesso Público (Viewers)
 
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `GET` | `/api/v1/events/{slug}/public-status` | Não | Status público do evento |
-| `POST` | `/api/v1/events/{slug}/access` | Não | Validar código e obter JWT |
-| `GET` | `/api/v1/events/{slug}/playback-url` | JWT Viewer | Obter URL de reprodução HLS |
-| `POST` | `/api/v1/events/{slug}/heartbeat` | JWT Viewer | Enviar ping (a cada 30s) |
+| Método | Endpoint | Auth | Request Body | Response | Status |
+|--------|----------|------|-------------|----------|--------|
+| `GET` | `/api/v1/events/{slug}/public-status` | Não | — | `{ status, title, scheduledAt }` | 200 |
+| `POST` | `/api/v1/events/{slug}/access` | Não | `{ inviteCode }` | `{ sessionId, viewerToken, expiresAt, eventId, jti }` | 200 |
+| `GET` | `/api/v1/events/{slug}/playback-url` | JWT Viewer | — | `{ playbackUrl, eventStatus }` | 200 |
+| `POST` | `/api/v1/events/{slug}/heartbeat` | JWT Viewer | — | — | 200 |
 
 ### Gravações (Customer)
 
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `GET` | `/api/v1/events/{id}/recordings` | JWT Customer | Listar gravações disponíveis |
-| `GET` | `/api/v1/recordings/{recordingId}/download-url` | JWT Customer | Obter URL pré-assinada (1h) |
+| Método | Endpoint | Auth | Response | Status |
+|--------|----------|------|----------|--------|
+| `GET` | `/api/v1/events/{id}/recordings` | JWT Customer | `List<RecordingResponse>` | 200 |
+| `GET` | `/api/v1/recordings/{recordingId}/download-url` | JWT Customer | `{ downloadUrl }` | 200 |
+
+> `recordingId` é o S3 key em Base64 URL-safe. Disponível apenas quando `recordingAvailable = true`.
+
+**RecordingResponse:**
+```json
+{
+  "recordingId": "string (Base64 encoded S3 key)",
+  "filename": "string",
+  "sizeBytes": "long",
+  "recordedAt": "Instant",
+  "downloadUrl": "string | null (gerado sob demanda)"
+}
+```
 
 ### Sessões de Viewers (Customer)
 
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `DELETE` | `/api/v1/events/{eventId}/sessions/{sessionId}` | JWT Customer | Revogar sessão de viewer |
+| Método | Endpoint | Auth | Response | Status |
+|--------|----------|------|----------|--------|
+| `DELETE` | `/api/v1/events/{eventId}/sessions/{sessionId}` | JWT Customer | — | 204 |
 
 ### Health & Monitoring
 
@@ -704,22 +772,32 @@ ValidateInviteService.validate()
 ### 4. Atualização de Status via Eventos IVS (Assíncrono)
 
 ```
-AWS IVS → EventBridge → Lambda → AWS SQS (enlace-ivs-events)
+AWS IVS → EventBridge (IVS Stream State Change / IVS Recording State Change)
+   ↓
+Lambda enlace-ivs-status
+   ├─→ IVS Stream State Change: lê detail.event_name
+   └─→ IVS Recording State Change: lê detail.recording_status
+   ↓
+AWS SQS (enlace-ivs-events) → IvsStreamStatusMessage { channelName, eventName, streamId, recordingS3KeyPrefix }
    ↓
 IvsEventsListener.onIvsEvent() [SqsListener]
    ↓
 HandleIvsStreamStatusService.handle()
    ↓
 UpdateStreamStatusService.update()
-   ├─→ EventRepository.findBySlug()
+   ├─→ EventRepository.findBySlug(channelName)
    ├─→ Se eventName == "Stream Start":
    │    ├─→ Event.markLive() [status=LIVE]
    │    └─→ EventRepository.save()
-   └─→ Se eventName == "Stream End":
-        ├─→ Event.markEnded() [status=ENDED]
-        ├─→ EventRepository.save()
-        └─→ IvsGateway.findRecording() [busca metadados da gravação]
+   ├─→ Se eventName == "Stream End":
+   │    ├─→ Event.markEnded() [status=ENDED]
+   │    └─→ EventRepository.save()
+   └─→ Se eventName == "Recording End":
+        ├─→ Event.markRecordingAvailable() [recording_available=true]
+        └─→ EventRepository.save()
 ```
+
+> **Timing:** O evento `Recording End` chega ~2 minutos após `Stream End`. O arquivo `recording-ended.json` aparece no S3 no mesmo momento. Somente após este evento `recordingAvailable` é `true` e as gravações ficam acessíveis via API.
 
 ### 5. Monitoramento de Viewers
 

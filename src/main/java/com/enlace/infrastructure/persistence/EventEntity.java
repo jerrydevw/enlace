@@ -54,6 +54,9 @@ public class EventEntity {
  
     @Column(name = "recording_s3_prefix")
     private String recordingS3Prefix;
+
+    @Column(name = "recording_available", nullable = false)
+    private boolean recordingAvailable;
  
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -78,6 +81,7 @@ public class EventEntity {
         entity.ivsChannelIngestEndpoint = event.getIvsChannelIngestEndpoint();
         entity.ivsPlaybackUrl = event.getIvsPlaybackUrl();
         entity.recordingS3Prefix = event.getRecordingS3Prefix();
+        entity.recordingAvailable = event.isRecordingAvailable();
         entity.createdAt = event.getCreatedAt();
         entity.updatedAt = event.getUpdatedAt();
         entity.deletedAt = event.getDeletedAt();
@@ -97,6 +101,7 @@ public class EventEntity {
         event.setIvsChannelIngestEndpoint(ivsChannelIngestEndpoint);
         event.setIvsPlaybackUrl(ivsPlaybackUrl);
         event.setRecordingS3Prefix(recordingS3Prefix);
+        event.setRecordingAvailable(recordingAvailable);
         event.setCreatedAt(createdAt);
         event.setUpdatedAt(updatedAt);
         event.setDeletedAt(deletedAt);

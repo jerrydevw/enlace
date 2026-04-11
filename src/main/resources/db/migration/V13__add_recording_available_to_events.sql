@@ -1,0 +1,2 @@
+ALTER TABLE events
+    ADD COLUMN recording_available BOOLEAN NOT NULL DEFAULT FALSE;

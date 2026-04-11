@@ -49,7 +49,7 @@ public class ProvisionEventService implements ProvisionEventUseCase {
                 event.markProvisioning();
                 eventRepository.save(event);
 
-                IvsGateway.IvsChannelResult result = ivsGateway.createChannel(event.getSlug());
+                IvsGateway.IvsChannelResult result = ivsGateway.createChannel(event.getSlug(), event.getPlan());
                 log.info("Canal IVS criado: ARN={}, Endpoint={}", result.channelArn(), result.ingestEndpoint());
 
                 String channelId = result.channelArn().substring(result.channelArn().lastIndexOf('/') + 1);

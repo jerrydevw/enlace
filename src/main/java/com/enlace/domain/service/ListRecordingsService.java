@@ -1,8 +1,8 @@
 package com.enlace.domain.service;
 
 import com.enlace.domain.exception.EventNotFoundException;
-import com.enlace.domain.model.Event;
 import com.enlace.domain.port.in.ListRecordingsUseCase;
+import com.enlace.domain.port.out.EventRecordingRepository;
 import com.enlace.domain.port.out.EventRepository;
 import com.enlace.domain.port.out.IvsGateway;
 import com.enlace.infrastructure.web.dto.RecordingResponse;
@@ -14,35 +14,31 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+
+
 @Service
 @RequiredArgsConstructor
 public class ListRecordingsService implements ListRecordingsUseCase {
 
     private final EventRepository eventRepository;
+    private final EventRecordingRepository eventRecordingRepository;
     private final IvsGateway ivsGateway;
 
     @Override
     public List<RecordingResponse> listRecordings(UUID eventId) {
-        Event event = eventRepository.findById(eventId)
+        eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException("Event not found"));
 
-        if (event.getRecordingS3Prefix() == null) {
-            return List.of();
-        }
-
-        List<IvsGateway.S3ObjectInfo> objects = ivsGateway.listObjects(event.getRecordingS3Prefix());
-
-        return objects.stream()
-                .filter(obj -> obj.key().endsWith(".mp4") || obj.key().endsWith(".m3u8"))
-                .map(obj -> {
-                    String filename = obj.key().substring(obj.key().lastIndexOf("/") + 1);
-                    String recordingId = Base64.getUrlEncoder().encodeToString(obj.key().getBytes());
+        return eventRecordingRepository.findByEventId(eventId).stream()
+                .map(recording -> {
+                    String recordingId = Base64.getUrlEncoder().encodeToString(recording.getS3Key().getBytes());
+                    String downloadUrl = ivsGateway.generatePresignedUrl(recording.getS3Key(), 60);
                     return new RecordingResponse(
                             recordingId,
-                            filename,
-                            obj.sizeBytes(),
-                            obj.lastModified(),
-                            null // URL será gerada sob demanda
+                            recording.getQuality(),
+                            recording.getDurationMs(),
+                            recording.getRecordedAt(),
+                            downloadUrl
                     );
                 })
                 .collect(Collectors.toList());
