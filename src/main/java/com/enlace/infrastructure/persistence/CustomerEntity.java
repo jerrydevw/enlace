@@ -36,7 +36,10 @@ public class CustomerEntity {
     @SoftDelete(strategy = SoftDeleteType.DELETED, columnName = "deleted_at")
     @Column(name = "deleted_at")
     private Instant deletedAt;
- 
+
+    @Column(nullable = false)
+    private boolean validated = false;
+
     public static CustomerEntity fromDomain(Customer customer) {
         CustomerEntity entity = new CustomerEntity();
         entity.id = customer.getId();
@@ -45,10 +48,13 @@ public class CustomerEntity {
         entity.password = customer.getPassword();
         entity.createdAt = customer.getCreatedAt();
         entity.deletedAt = customer.getDeletedAt();
+        entity.validated = customer.isValidated();
         return entity;
     }
 
     public Customer toDomain() {
-        return new Customer(id, name, email, password, createdAt, deletedAt);
+        Customer customer = new Customer(id, name, email, password, createdAt, deletedAt);
+        customer.setValidated(validated);
+        return customer;
     }
 }

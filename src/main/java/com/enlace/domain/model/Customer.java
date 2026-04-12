@@ -18,6 +18,7 @@ public class Customer {
     private String password;
     private Instant createdAt;
     private Instant deletedAt;
+    private boolean validated = false;
 
     public Customer(UUID id, String name, String email, String password, Instant createdAt, Instant deletedAt) {
         this.id = id;
@@ -26,5 +27,6 @@ public class Customer {
         this.password = password;
         this.createdAt = createdAt;
         this.deletedAt = deletedAt;
+        this.validated = false;
     }
 }

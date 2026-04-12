@@ -1,6 +1,7 @@
 package com.enlace.infrastructure.web.advice;
 
 import com.enlace.domain.exception.*;
+import com.enlace.domain.exception.CustomerNotValidatedException;
 import com.enlace.domain.exception.SessionConflictException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -58,6 +59,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex) {
         log.warn("Acesso proibido: {}", ex.getMessage());
         return buildResponse(HttpStatus.FORBIDDEN, "FORBIDDEN", ex.getMessage());
+    }
+
+    @ExceptionHandler(CustomerNotValidatedException.class)
+    public ResponseEntity<ErrorResponse> handleCustomerNotValidated(CustomerNotValidatedException ex) {
+        log.warn("Cadastro não validado: {}", ex.getMessage());
+        return buildResponse(HttpStatus.FORBIDDEN, "CUSTOMER_NOT_VALIDATED", ex.getMessage());
     }
 
     @ExceptionHandler(PlanLimitExceededException.class)

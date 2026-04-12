@@ -1,6 +1,7 @@
 package com.enlace.domain.service;
 
 import com.enlace.domain.exception.CustomerNotFoundException;
+import com.enlace.domain.exception.CustomerNotValidatedException;
 import com.enlace.domain.model.Event;
 import com.enlace.domain.port.in.CreateEventUseCase;
 import com.enlace.domain.port.out.CustomerRepository;
@@ -39,8 +40,12 @@ public class CreateEventService implements CreateEventUseCase {
     @Override
     @Transactional
     public Event create(CreateEventCommand command) {
-        customerRepository.findById(command.customerId())
+        var customer = customerRepository.findById(command.customerId())
                 .orElseThrow(() -> new CustomerNotFoundException("Customer not found: " + command.customerId()));
+
+        if (!customer.isValidated()) {
+            throw new CustomerNotValidatedException("Cadastro ainda não validado. Entre em contato para liberar o acesso.");
+        }
         
         String baseSlug = SlugGenerator.generate(command.title(), command.scheduledAt());
         String slug = ensureUniqueSlug(baseSlug);
