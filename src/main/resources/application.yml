@@ -90,4 +90,4 @@ resilience4j:
 
 logging:
   level:
-    com.enlace: DEBUG
+    com.enlace: INFO
