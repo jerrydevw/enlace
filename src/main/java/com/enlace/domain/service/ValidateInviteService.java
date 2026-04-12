@@ -16,6 +16,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -75,6 +77,11 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
                     return new InvalidInviteCodeException("Invalid invite code");
                 });
 
+        if (!constantTimeEquals(token.getToken(), command.inviteToken())) {
+            incrementAttempts(command.ipAddress());
+            throw new InvalidInviteCodeException("Invalid invite code");
+        }
+
         if (token.isRevoked()) {
             throw new InviteCodeAlreadyUsedException("Invite code already used");
         }
@@ -130,5 +137,13 @@ public class ValidateInviteService implements ValidateInviteCodeUseCase {
 
     private void incrementAttempts(String ipAddress) {
         attempts.computeIfAbsent(ipAddress, k -> new AtomicInteger(0)).incrementAndGet();
+    }
+
+    private boolean constantTimeEquals(String a, String b) {
+        if (a == null || b == null) return false;
+        return MessageDigest.isEqual(
+            a.getBytes(StandardCharsets.UTF_8),
+            b.getBytes(StandardCharsets.UTF_8)
+        );
     }
 }

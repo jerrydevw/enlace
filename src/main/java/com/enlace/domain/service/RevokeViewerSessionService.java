@@ -1,5 +1,6 @@
 package com.enlace.domain.service;
 
+import com.enlace.domain.exception.ForbiddenException;
 import com.enlace.domain.exception.SessionRevokedException;
 import com.enlace.domain.model.ViewerSession;
 import com.enlace.domain.port.in.RevokeViewerSessionUseCase;
@@ -20,10 +21,15 @@ public class RevokeViewerSessionService implements RevokeViewerSessionUseCase {
 
     @Override
     @Transactional
-    public void revoke(UUID sessionId) {
+    public void revoke(UUID sessionId, UUID requestingCustomerId) {
         ViewerSession session = viewerSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new SessionRevokedException("Session not found"));
-        
+
+        UUID eventOwnerId = session.getEvent().getCustomerId();
+        if (!eventOwnerId.equals(requestingCustomerId)) {
+            throw new ForbiddenException("Você não tem permissão para revogar esta sessão.");
+        }
+
         session.revoke();
         viewerSessionRepository.save(session);
     }

@@ -9,6 +9,7 @@ public interface ValidateInviteCodeUseCase {
     record ValidateInviteCommand(
         String eventSlug,
         String code,
+        String inviteToken,
         String ipAddress,
         String userAgent
     ) {}

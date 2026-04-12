@@ -94,6 +94,7 @@ public class ViewerTokenController {
                 token.getId(),
                 token.getLabel(),
                 token.getCode(),
+                token.getToken(),
                 token.getGuestName(),
                 token.getDeliveryStatus(),
                 token.isRevoked(),

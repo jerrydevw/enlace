@@ -4,6 +4,7 @@ import com.enlace.domain.port.in.GetEventPublicStatusUseCase;
 import com.enlace.domain.port.in.GetPlaybackUrlUseCase;
 import com.enlace.domain.port.in.ValidateInviteCodeUseCase;
 import com.enlace.domain.port.in.RevokeViewerSessionUseCase;
+import com.enlace.infrastructure.config.CustomerAuthentication;
 import com.enlace.infrastructure.config.ViewerAuthentication;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -41,13 +42,15 @@ public class ViewerAccessController {
             HttpServletRequest request) {
         
         String code = body.get("inviteCode");
-        log.info("Tentativa de acesso ao evento: {} com código: {}", slug, code);
+        String inviteToken = body.get("inviteToken");
+        log.info("Tentativa de acesso ao evento: {}", slug);
 
         ValidateInviteCodeUseCase.ViewerSessionResult result = validateInviteCodeUseCase.validate(
                 new ValidateInviteCodeUseCase.ValidateInviteCommand(
                         slug,
                         code,
-                        request.getRemoteAddr(),
+                        inviteToken,
+                        extractIp(request),
                         request.getHeader("User-Agent")
                 )
         );
@@ -79,9 +82,19 @@ public class ViewerAccessController {
         ));
     }
 
-    @DeleteMapping("/{eventId}/sessions/{sessionId}")
-    public ResponseEntity<Void> revokeSession(@PathVariable UUID eventId, @PathVariable UUID sessionId) {
-        revokeViewerSessionUseCase.revoke(sessionId);
+    private String extractIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResponseEntity<Void> revokeSession(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal CustomerAuthentication auth) {
+        revokeViewerSessionUseCase.revoke(sessionId, auth.getCustomerId());
         return ResponseEntity.noContent().build();
     }
 }

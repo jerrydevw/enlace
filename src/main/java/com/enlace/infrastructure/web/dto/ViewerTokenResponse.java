@@ -8,6 +8,7 @@ public record ViewerTokenResponse(
     UUID id,
     String label,
     String code,
+    String token,
     String guestName,
     ViewerToken.DeliveryStatus deliveryStatus,
     boolean revoked,
