@@ -2,6 +2,7 @@ package com.enlace.infrastructure.web.controller;
 
 import com.enlace.domain.model.Event;
 import com.enlace.domain.model.EventStatus;
+import com.enlace.domain.service.StopStreamService;
 import com.enlace.domain.model.StreamCredential;
 import com.enlace.domain.port.in.CreateEventUseCase;
 import com.enlace.domain.port.in.DeleteEventUseCase;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 @Tag(name = "Events", description = "Endpoints para gestão de eventos de live.")
 public class EventController {
 
+    private final StopStreamService stopStreamService;
     private final CreateEventUseCase createEventUseCase;
     private final GetEventUseCase getEventUseCase;
     private final DeleteEventUseCase deleteEventUseCase;
@@ -55,13 +57,15 @@ public class EventController {
     private final ManageEventPhotoUseCase manageEventPhotoUseCase;
     private final ServeEventPhotoUseCase serveEventPhotoUseCase;
 
-    public EventController(CreateEventUseCase createEventUseCase, GetEventUseCase getEventUseCase,
+    public EventController(StopStreamService stopStreamService,
+                           CreateEventUseCase createEventUseCase, GetEventUseCase getEventUseCase,
                            DeleteEventUseCase deleteEventUseCase, GetCredentialsUseCase getCredentialsUseCase,
                            UpdateEventUseCase updateEventUseCase, EventOwnershipValidator ownershipValidator,
                            ViewerHeartbeatUseCase heartbeatUseCase,
                            UpdateCoupleStoryUseCase updateCoupleStoryUseCase,
                            ManageEventPhotoUseCase manageEventPhotoUseCase,
                            ServeEventPhotoUseCase serveEventPhotoUseCase) {
+        this.stopStreamService = stopStreamService;
         this.createEventUseCase = createEventUseCase;
         this.getEventUseCase = getEventUseCase;
         this.deleteEventUseCase = deleteEventUseCase;
@@ -257,6 +261,16 @@ public class EventController {
         UUID eventId = SecurityUtils.getCurrentViewer().getEventId();
         ViewerHeartbeatUseCase.HeartbeatResult result = heartbeatUseCase.registerHeartbeat(sessionId, eventId, nonce);
         return ResponseEntity.ok(Map.of("watchNonce", result.newNonce()));
+    }
+
+    @PostMapping("/{id}/stop")
+    @Operation(summary = "Encerrar transmissão", description = "Para o stream ativo no IVS e marca o evento como ENDED.")
+    public ResponseEntity<EventResponse> stop(@PathVariable UUID id) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
+        ownershipValidator.validate(id, customerId);
+        stopStreamService.stop(id, customerId);
+        Event event = getEventUseCase.getById(id);
+        return ResponseEntity.ok(toResponse(event));
     }
 
     @GetMapping("/{id}/viewers/count")

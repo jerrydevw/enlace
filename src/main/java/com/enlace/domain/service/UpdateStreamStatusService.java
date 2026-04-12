@@ -52,6 +52,10 @@ public class UpdateStreamStatusService implements UpdateStreamStatusUseCase {
                 eventRepository.save(event);
             }
             case "Stream End" -> {
+                if (event.getStatus() == com.enlace.domain.model.EventStatus.ENDED) {
+                    log.info("Evento '{}' já está ENDED — ignorando Stream End duplicado", channelName);
+                    return;
+                }
                 log.info("Marcando evento '{}' como ENDED — streamId: {}", channelName, streamId);
                 event.markEnded();
                 eventRepository.save(event);

@@ -77,6 +77,23 @@ public class IvsGatewayAdapter implements IvsGateway {
     }
 
     @Override
+    @CircuitBreaker(name = "ivs")
+    @Retry(name = "ivs")
+    public void stopStream(String channelArn) {
+        log.info("Encerrando stream do canal IVS: {}", channelArn);
+        try {
+            ivsClient.stopStream(software.amazon.awssdk.services.ivs.model.StopStreamRequest.builder()
+                    .channelArn(channelArn)
+                    .build());
+            log.info("Stream encerrado com sucesso: {}", channelArn);
+        } catch (software.amazon.awssdk.services.ivs.model.ChannelNotBroadcastingException e) {
+            log.warn("Canal {} não estava transmitindo ao encerrar — ignorando", channelArn);
+        }
+    }
+
+    @Override
+    @CircuitBreaker(name = "ivs")
+    @Retry(name = "ivs")
     public void deleteChannel(String channelArn, String streamKeyArn) {
         log.info("Chamando AWS IVS para deletar canal: {}", channelArn);
 

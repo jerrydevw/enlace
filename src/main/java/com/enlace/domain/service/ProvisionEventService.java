@@ -54,9 +54,11 @@ public class ProvisionEventService implements ProvisionEventUseCase {
 
                 String channelId = result.channelArn().substring(result.channelArn().lastIndexOf('/') + 1);
                 
+                if (accountId == null || accountId.isBlank()) {
+                    log.error("aws.account-id não configurado — o prefixo S3 ficará incorreto e gravações não serão encontradas. Configure AWS_ACCOUNT_ID.");
+                }
                 String accountIdToUse = (accountId == null || accountId.isBlank()) ? "" : accountId;
                 String s3Prefix = "ivs/v1/" + accountIdToUse + "/" + channelId;
-                // Remove barras duplas se o accountId estiver vazio
                 s3Prefix = s3Prefix.replace("//", "/");
 
                 event.markReady(result.channelArn(), result.ingestEndpoint(), result.playbackUrl(), s3Prefix);
