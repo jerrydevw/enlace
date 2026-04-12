@@ -7,6 +7,8 @@ import com.enlace.domain.port.in.CreateEventUseCase;
 import com.enlace.domain.port.in.DeleteEventUseCase;
 import com.enlace.domain.port.in.GetCredentialsUseCase;
 import com.enlace.domain.port.in.GetEventUseCase;
+import com.enlace.domain.port.in.ManageEventPhotoUseCase;
+import com.enlace.domain.port.in.ServeEventPhotoUseCase;
 import com.enlace.domain.port.in.UpdateCoupleStoryUseCase;
 import com.enlace.domain.port.in.UpdateEventUseCase;
 import com.enlace.domain.port.in.ViewerHeartbeatUseCase;
@@ -24,9 +26,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -47,12 +52,16 @@ public class EventController {
     private final EventOwnershipValidator ownershipValidator;
     private final ViewerHeartbeatUseCase heartbeatUseCase;
     private final UpdateCoupleStoryUseCase updateCoupleStoryUseCase;
+    private final ManageEventPhotoUseCase manageEventPhotoUseCase;
+    private final ServeEventPhotoUseCase serveEventPhotoUseCase;
 
     public EventController(CreateEventUseCase createEventUseCase, GetEventUseCase getEventUseCase,
                            DeleteEventUseCase deleteEventUseCase, GetCredentialsUseCase getCredentialsUseCase,
                            UpdateEventUseCase updateEventUseCase, EventOwnershipValidator ownershipValidator,
                            ViewerHeartbeatUseCase heartbeatUseCase,
-                           UpdateCoupleStoryUseCase updateCoupleStoryUseCase) {
+                           UpdateCoupleStoryUseCase updateCoupleStoryUseCase,
+                           ManageEventPhotoUseCase manageEventPhotoUseCase,
+                           ServeEventPhotoUseCase serveEventPhotoUseCase) {
         this.createEventUseCase = createEventUseCase;
         this.getEventUseCase = getEventUseCase;
         this.deleteEventUseCase = deleteEventUseCase;
@@ -61,6 +70,8 @@ public class EventController {
         this.ownershipValidator = ownershipValidator;
         this.heartbeatUseCase = heartbeatUseCase;
         this.updateCoupleStoryUseCase = updateCoupleStoryUseCase;
+        this.manageEventPhotoUseCase = manageEventPhotoUseCase;
+        this.serveEventPhotoUseCase = serveEventPhotoUseCase;
     }
 
     @PostMapping
@@ -198,6 +209,45 @@ public class EventController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping(value = "/{id}/photos/{index}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload de foto da sala de espera", description = "Faz upload de uma foto (índice 1, 2 ou 3) para a sala de espera dos convidados.")
+    public ResponseEntity<Void> uploadPhoto(
+            @PathVariable UUID id,
+            @PathVariable int index,
+            @RequestPart("file") MultipartFile file) throws java.io.IOException {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
+        ownershipValidator.validate(id, customerId);
+        manageEventPhotoUseCase.upload(new ManageEventPhotoUseCase.UploadPhotoCommand(
+            id, customerId, index, file.getBytes(), file.getContentType()
+        ));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/photos/{index}")
+    @Operation(summary = "Remover foto da sala de espera")
+    public ResponseEntity<Void> deletePhoto(
+            @PathVariable UUID id,
+            @PathVariable int index) {
+        UUID customerId = SecurityUtils.getCurrentCustomerId();
+        ownershipValidator.validate(id, customerId);
+        manageEventPhotoUseCase.delete(new ManageEventPhotoUseCase.DeletePhotoCommand(
+            id, customerId, index
+        ));
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{slug}/photos/{index}")
+    @Operation(summary = "Servir foto da sala de espera", description = "Retorna os bytes da foto. Endpoint público.")
+    public ResponseEntity<byte[]> servePhoto(
+            @PathVariable String slug,
+            @PathVariable int index) {
+        ServeEventPhotoUseCase.PhotoResult result = serveEventPhotoUseCase.serve(slug, index);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(result.contentType()))
+            .header(HttpHeaders.CACHE_CONTROL, "public, max-age=86400")
+            .body(result.bytes());
+    }
+
     @PostMapping("/{slug}/heartbeat")
     @Operation(summary = "Registrar heartbeat do viewer", description = "Endpoint para o viewer enviar ping a cada 30s. Requer o header X-Watch-Nonce com o nonce atual. Retorna o novo nonce.")
     public ResponseEntity<Map<String, String>> heartbeat(
@@ -229,7 +279,8 @@ public class EventController {
             ? new CoupleStoryResponse(
                 event.getCoupleStory().getPartner1Name(),
                 event.getCoupleStory().getPartner2Name(),
-                event.getCoupleStory().getMessage())
+                event.getCoupleStory().getMessage(),
+                event.getCoupleStory().getPhotoIndices())
             : null;
         return new EventResponse(
                 event.getId(),

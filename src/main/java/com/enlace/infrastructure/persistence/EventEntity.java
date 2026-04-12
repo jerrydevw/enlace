@@ -77,7 +77,16 @@ public class EventEntity {
 
     @Column(name = "story_message", length = 400)
     private String storyMessage;
- 
+
+    @Column(name = "photo_key_1", length = 500)
+    private String photoKey1;
+
+    @Column(name = "photo_key_2", length = 500)
+    private String photoKey2;
+
+    @Column(name = "photo_key_3", length = 500)
+    private String photoKey3;
+
     public static EventEntity fromDomain(Event event) {
         EventEntity entity = new EventEntity();
         entity.id = event.getId();
@@ -98,6 +107,9 @@ public class EventEntity {
         entity.partner1Name = event.getCoupleStory() != null ? event.getCoupleStory().getPartner1Name() : null;
         entity.partner2Name = event.getCoupleStory() != null ? event.getCoupleStory().getPartner2Name() : null;
         entity.storyMessage = event.getCoupleStory() != null ? event.getCoupleStory().getMessage() : null;
+        entity.photoKey1    = event.getCoupleStory() != null ? event.getCoupleStory().getPhotoKey1() : null;
+        entity.photoKey2    = event.getCoupleStory() != null ? event.getCoupleStory().getPhotoKey2() : null;
+        entity.photoKey3    = event.getCoupleStory() != null ? event.getCoupleStory().getPhotoKey3() : null;
         return entity;
     }
  
@@ -118,10 +130,15 @@ public class EventEntity {
         event.setCreatedAt(createdAt);
         event.setUpdatedAt(updatedAt);
         event.setDeletedAt(deletedAt);
-        boolean hasStory = partner1Name != null || partner2Name != null || storyMessage != null;
-        event.setCoupleStory(hasStory
-            ? new CoupleStory(partner1Name, partner2Name, storyMessage)
-            : null);
+        boolean hasStory = partner1Name != null || partner2Name != null || storyMessage != null
+                        || photoKey1 != null || photoKey2 != null || photoKey3 != null;
+        if (hasStory) {
+            CoupleStory story = new CoupleStory(partner1Name, partner2Name, storyMessage);
+            story.setPhotoKey1(photoKey1);
+            story.setPhotoKey2(photoKey2);
+            story.setPhotoKey3(photoKey3);
+            event.setCoupleStory(story);
+        }
         return event;
     }
 }

@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/events/*/access").permitAll()
                 .requestMatchers(HttpMethod.GET,  "/api/v1/events/*/public-status").permitAll()
+                .requestMatchers(HttpMethod.GET,  "/api/v1/events/*/photos/*").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/v1/events/*/playback-url").authenticated()

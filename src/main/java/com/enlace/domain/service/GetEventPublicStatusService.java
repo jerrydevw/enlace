@@ -28,7 +28,8 @@ public class GetEventPublicStatusService implements GetEventPublicStatusUseCase 
             coupleStory = new CoupleStoryResponse(
                 cs.getPartner1Name(),
                 cs.getPartner2Name(),
-                cs.getMessage()
+                cs.getMessage(),
+                cs.getPhotoIndices()
             );
         }
 

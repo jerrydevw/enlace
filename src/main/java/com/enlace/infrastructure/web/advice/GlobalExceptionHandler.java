@@ -18,6 +18,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(PhotoNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePhotoNotFound(PhotoNotFoundException ex) {
+        log.warn("Foto não encontrada: {}", ex.getMessage());
+        return buildResponse(HttpStatus.NOT_FOUND, "PHOTO_NOT_FOUND", ex.getMessage());
+    }
+
     @ExceptionHandler({CustomerNotFoundException.class, EventNotFoundException.class, ViewerTokenNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleNotFound(RuntimeException ex) {
         log.warn("Recurso não encontrado: {}", ex.getMessage());
