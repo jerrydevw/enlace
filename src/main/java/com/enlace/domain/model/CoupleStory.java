@@ -15,7 +15,7 @@ import java.util.List;
 public class CoupleStory {
     private String partner1Name;   // max 100 chars, nullable
     private String partner2Name;   // max 100 chars, nullable
-    private String message;        // max 400 chars, nullable
+    private String message;        // max length: unlimited, nullable
     private String photoKey1;      // S3 key, nullable
     private String photoKey2;      // S3 key, nullable
     private String photoKey3;      // S3 key, nullable

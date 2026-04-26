@@ -27,7 +27,7 @@ public class UpdateCoupleStoryService implements UpdateCoupleStoryUseCase {
         CoupleStory story = new CoupleStory(
             sanitize(command.partner1Name(), 100),
             sanitize(command.partner2Name(), 100),
-            sanitize(command.message(), 400)
+            sanitize(command.message(), null)
         );
 
         event.setCoupleStory(story.hasContent() ? story : null);
@@ -35,10 +35,11 @@ public class UpdateCoupleStoryService implements UpdateCoupleStoryUseCase {
         eventRepository.save(event);
     }
 
-    /** Trim, null se blank, trunca no limite */
-    private String sanitize(String value, int maxLength) {
+    /** Trim, null se blank, trunca no limite (ou sem limite se maxLength = null) */
+    private String sanitize(String value, Integer maxLength) {
         if (value == null || value.isBlank()) return null;
         String trimmed = value.trim();
+        if (maxLength == null) return trimmed;
         return trimmed.length() > maxLength ? trimmed.substring(0, maxLength) : trimmed;
     }
 }

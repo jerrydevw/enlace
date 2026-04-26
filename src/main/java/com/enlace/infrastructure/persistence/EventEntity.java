@@ -75,7 +75,7 @@ public class EventEntity {
     @Column(name = "partner2_name", length = 100)
     private String partner2Name;
 
-    @Column(name = "story_message", length = 400)
+    @Column(name = "story_message", columnDefinition = "TEXT")
     private String storyMessage;
 
     @Column(name = "photo_key_1", length = 500)
